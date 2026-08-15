@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { isPostgresConfigured, postgresDatabase } from "./postgres-database.server";
 
 type Row = Record<string, unknown>;
 // The compatibility query builder intentionally returns rows with runtime-defined shapes.
@@ -797,9 +798,13 @@ function finishBypass(db: DatabaseSync, args: Row): Result {
 export const database = {
   from(table: string) {
     if (!(table in tableMeta)) throw new Error(`Unknown table: ${table}`);
+    if (isPostgresConfigured()) {
+      return postgresDatabase.from(table) as unknown as QueryBuilder;
+    }
     return new QueryBuilder(table as TableName);
   },
   async rpc(name: string, args: Row) {
+    if (isPostgresConfigured()) return postgresDatabase.rpc(name, args);
     return rpc(name, args);
   },
 };

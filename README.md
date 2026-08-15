@@ -11,6 +11,10 @@ The app requests only the `identify` and `email` scopes. Discord access tokens a
 
 โปรเจกต์นี้รันแบบ self-hosted ด้วย TanStack Start และเก็บข้อมูลด้วย SQLite โดยไม่พึ่ง Lovable หรือ Supabase
 
+เมื่อกำหนด `DATABASE_URL` ระบบจะใช้ Neon PostgreSQL แทน SQLite โดยอัตโนมัติ
+เหมาะสำหรับ Render Free ซึ่งไม่มี Persistent Disk ข้อมูลผู้ใช้ โปรไฟล์ Discord แพ็กเกจ
+ประวัติ การตั้งค่าหลังบ้าน และภาพพื้นหลังจะถูกเก็บใน PostgreSQL
+
 ## เริ่มต้นใช้งาน
 
 ```bash
@@ -45,5 +49,9 @@ SQLite และรูปที่อัปโหลดถูกเก็บไ�
 Persistent Disk โดยกำหนด mount path เป็น `/var/data` แล้วตั้ง environment variable
 `DATA_DIR=/var/data` ให้ตรงกัน หากไม่มี disk ข้อมูลจะหายเมื่อ service restart, spin down
 หรือ deploy ใหม่ โดย Render Free Web Service ไม่รองรับ Persistent Disk
+
+สำหรับ Render Free ให้สร้างฐานข้อมูล Neon แล้วเพิ่ม connection string ใน Environment เป็น
+`DATABASE_URL` ระบบจะสร้างตารางและข้อมูลตั้งต้นให้โดยอัตโนมัติเมื่อมีคำขอแรก ไม่ต้องตั้ง
+`DATA_DIR` สำหรับฐานข้อมูล และห้าม commit connection string ลง GitHub
 
 เปิดเว็บในเบราว์เซอร์ที่ `http://localhost:3000` (`0.0.0.0` เป็น bind address ของเซิร์ฟเวอร์ ไม่ใช่ URL สำหรับเปิดเว็บ)

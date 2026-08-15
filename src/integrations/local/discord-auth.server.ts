@@ -80,7 +80,7 @@ function internalUsername(discordUsername: string, discordId: string) {
   return candidate || `discord_${discordId.slice(-8)}`;
 }
 
-function signInDiscordUser(discord: DiscordUser) {
+function signInDiscordUserSqlite(discord: DiscordUser) {
   const db = getSqlite();
   const discordEmail = discord.email?.trim().toLowerCase() || null;
   const ownerDiscordId = (
@@ -162,6 +162,29 @@ function signInDiscordUser(discord: DiscordUser) {
   return { token: sessionForUser(user), user };
 }
 
+async function signInDiscordUser(discord: DiscordUser) {
+  if (!process.env["DATABASE_URL"]?.trim()) return signInDiscordUserSqlite(discord);
+
+  const discordEmail = discord.email?.trim().toLowerCase() || null;
+  const ownerDiscordId = (
+    process.env["OWNER_DISCORD_ID"] ||
+    process.env["ADMIN_DISCORD_ID"] ||
+    ""
+  ).trim();
+  const { postgresSignInDiscordUser } = await import("./postgres-database.server");
+  const user = await postgresSignInDiscordUser({
+    discordId: discord.id,
+    email: discordEmail,
+    verified: Boolean(discord.verified),
+    discordUsername: discord.username,
+    displayName: discord.global_name || discord.username,
+    avatarUrl: avatarUrl(discord),
+    passwordHash: hashPassword(randomBytes(48).toString("base64url")),
+    isOwner: ownerDiscordId.length > 0 && discord.id === ownerDiscordId,
+  });
+  return { token: sessionForUser(user), user };
+}
+
 export function beginDiscordAuth(request: Request) {
   try {
     const { clientId, redirectUri } = discordConfig(request);
@@ -222,7 +245,7 @@ export async function finishDiscordAuth(request: Request) {
     const discord = (await userResponse.json()) as DiscordUser;
     if (!discord.id || !discord.username) throw new Error("Discord returned an invalid profile");
 
-    const session = signInDiscordUser(discord);
+    const session = await signInDiscordUser(discord);
     const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
     return authRedirect(request, "discord_session", payload);
   } catch (error) {

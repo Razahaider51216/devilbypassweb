@@ -211,7 +211,7 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     await assertAdmin(context);
     if (data.userId === context.userId) throw new Error("You cannot delete your own account.");
     const { deleteUser } = await import("@/integrations/local/auth.server");
-    deleteUser(data.userId);
+    await deleteUser(data.userId);
     return { ok: true };
   });
 
@@ -439,7 +439,11 @@ export const adminListSettings = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
     const db = await assertAdmin(context);
-    const { data } = await db.from("site_settings").select("key, value").order("key");
+    const { data } = await db
+      .from("site_settings")
+      .select("key, value")
+      .neq("key", "banner_path")
+      .order("key");
     return data ?? [];
   });
 

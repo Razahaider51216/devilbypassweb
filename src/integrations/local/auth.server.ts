@@ -31,7 +31,7 @@ export function sessionForUser(user: { id: string; email: string }) {
   return `${body}.${signature}`;
 }
 
-export function verifySessionToken(token: string): SessionClaims | null {
+export async function verifySessionToken(token: string): Promise<SessionClaims | null> {
   const [body, signature] = token.split(".");
   if (!body || !signature) return null;
   const expected = createHmac("sha256", sessionSecret()).update(body).digest();
@@ -40,15 +40,26 @@ export function verifySessionToken(token: string): SessionClaims | null {
   try {
     const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as SessionClaims;
     if (!claims.sub || !claims.email || claims.exp <= Math.floor(Date.now() / 1000)) return null;
-    const exists = getSqlite()
-      .prepare("SELECT 1 FROM users WHERE id=? AND email=?")
-      .get(claims.sub, claims.email);
+    const exists = process.env["DATABASE_URL"]?.trim()
+      ? await import("./postgres-database.server").then(({ postgresSessionUser }) =>
+          postgresSessionUser(claims.sub, claims.email),
+        )
+      : Boolean(
+          getSqlite()
+            .prepare("SELECT 1 FROM users WHERE id=? AND email=?")
+            .get(claims.sub, claims.email),
+        );
     return exists ? claims : null;
   } catch {
     return null;
   }
 }
 
-export function deleteUser(userId: string) {
+export async function deleteUser(userId: string) {
+  if (process.env["DATABASE_URL"]?.trim()) {
+    const { postgresDeleteUser } = await import("./postgres-database.server");
+    await postgresDeleteUser(userId);
+    return;
+  }
   getSqlite().prepare("DELETE FROM users WHERE id=?").run(userId);
 }
