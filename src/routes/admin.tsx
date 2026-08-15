@@ -39,7 +39,6 @@ import {
   adminSavePlan,
   adminSavePurchaseContactLink,
   adminSaveSetting,
-  adminSetPassword,
   adminUpdateUser,
   adminListAnnouncements,
   adminSaveAnnouncement,
@@ -284,7 +283,6 @@ function UsersTab({ copy, x, lang }: { copy: Copy; x: X; lang: Lang }) {
   const list = useServerFn(adminListUsers);
   const plansFn = useServerFn(adminListPlans);
   const update = useServerFn(adminUpdateUser);
-  const setPassword = useServerFn(adminSetPassword);
   const remove = useServerFn(adminDeleteUser);
 
   const users = useQuery({
@@ -304,12 +302,6 @@ function UsersTab({ copy, x, lang }: { copy: Copy; x: X; lang: Lang }) {
       toast.success(x.saved);
       invalidate();
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : copy.common.error),
-  });
-
-  const password = useMutation({
-    mutationFn: (input: { userId: string; password: string }) => setPassword({ data: input }),
-    onSuccess: () => toast.success(x.saved),
     onError: (e) => toast.error(e instanceof Error ? e.message : copy.common.error),
   });
 
@@ -360,7 +352,6 @@ function UsersTab({ copy, x, lang }: { copy: Copy; x: X; lang: Lang }) {
               open={openId === user.id}
               onToggle={() => setOpenId(openId === user.id ? null : user.id)}
               onPatch={(input) => patch.mutate({ userId: user.id, ...input })}
-              onPassword={(value) => password.mutate({ userId: user.id, password: value })}
               onDelete={() => {
                 if (window.confirm(x.confirmDelete)) del.mutate(user.id);
               }}
@@ -385,7 +376,6 @@ function UserRow({
   open,
   onToggle,
   onPatch,
-  onPassword,
   onDelete,
   busy,
 }: {
@@ -397,14 +387,12 @@ function UserRow({
   open: boolean;
   onToggle: () => void;
   onPatch: (input: Omit<UserPatch, "userId">) => void;
-  onPassword: (value: string) => void;
   onDelete: () => void;
   busy: boolean;
 }) {
   const [planCode, setPlanCode] = useState(user.planCode);
   const [days, setDays] = useState<string>(user.daysLeft ? String(user.daysLeft) : "");
   const [note, setNote] = useState(user.adminNote);
-  const [newPassword, setNewPassword] = useState("");
 
   return (
     <Card>
@@ -505,30 +493,6 @@ function UserRow({
             <button onClick={() => onPatch({ resetUsage: true })} className={btn}>
               <RefreshCw className="h-3.5 w-3.5" /> {x.resetUsage}
             </button>
-          </div>
-
-          <div className="rounded-xl border border-border p-3">
-            <p className="text-[11px] font-semibold">{x.setPassword}</p>
-            <p className="mt-1 text-[10px] text-muted-foreground">{x.setPasswordHint}</p>
-            <div className="mt-2 flex gap-2">
-              <input
-                type="text"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                className={field}
-              />
-              <button
-                disabled={newPassword.length < 8}
-                onClick={() => {
-                  onPassword(newPassword);
-                  setNewPassword("");
-                }}
-                className={btnSolid}
-              >
-                {x.save}
-              </button>
-            </div>
           </div>
 
           <button onClick={onDelete} className={`${btn} text-destructive`}>

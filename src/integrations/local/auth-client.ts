@@ -1,21 +1,9 @@
-import {
-  confirmPasswordReset,
-  requestPasswordReset,
-  signIn,
-  signUp,
-  updateMyPassword,
-} from "@/lib/auth.functions";
-
 export type LocalSession = { access_token: string; user: { id: string; email: string } };
-type AuthEvent = "SIGNED_IN" | "SIGNED_OUT" | "PASSWORD_RECOVERY" | "TOKEN_REFRESHED";
+type AuthEvent = "SIGNED_IN" | "SIGNED_OUT" | "TOKEN_REFRESHED";
 type Listener = (event: AuthEvent, session: LocalSession | null) => void;
 
 const STORAGE_KEY = "devildev.session";
 const listeners = new Set<Listener>();
-
-function errorOf(error: unknown) {
-  return error instanceof Error ? error : new Error(String(error));
-}
 
 function read(): LocalSession | null {
   if (typeof window === "undefined") return null;
@@ -78,64 +66,9 @@ export const auth = {
   async getSession() {
     return { data: { session: read() } };
   },
-  async signInWithPassword(input: { email: string; password: string }) {
-    try {
-      const result = await signIn({ data: input });
-      return { data: { session: save(result, "SIGNED_IN"), user: result.user }, error: null };
-    } catch (error) {
-      return { data: { session: null, user: null }, error: errorOf(error) };
-    }
-  },
-  async signUp(input: {
-    email: string;
-    password: string;
-    options?: { data?: { username?: string }; emailRedirectTo?: string };
-  }) {
-    try {
-      const result = await signUp({
-        data: {
-          email: input.email,
-          password: input.password,
-          username: input.options?.data?.username ?? "",
-        },
-      });
-      return { data: { session: save(result, "SIGNED_IN"), user: result.user }, error: null };
-    } catch (error) {
-      return { data: { session: null, user: null }, error: errorOf(error) };
-    }
-  },
   async signOut() {
     localStorage.removeItem(STORAGE_KEY);
     listeners.forEach((listener) => listener("SIGNED_OUT", null));
     return { error: null };
-  },
-  async resetPasswordForEmail(email: string) {
-    try {
-      const data = await requestPasswordReset({ data: { email } });
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error: errorOf(error) };
-    }
-  },
-  async verifyOtp(input: { email: string; token: string; type: "recovery" }) {
-    try {
-      const result = await confirmPasswordReset({
-        data: { email: input.email, code: input.token },
-      });
-      return {
-        data: { session: save(result, "PASSWORD_RECOVERY"), user: result.user },
-        error: null,
-      };
-    } catch (error) {
-      return { data: { session: null, user: null }, error: errorOf(error) };
-    }
-  },
-  async updateUser(input: { password: string }) {
-    try {
-      await updateMyPassword({ data: input });
-      return { data: { user: read()?.user ?? null }, error: null };
-    } catch (error) {
-      return { data: { user: null }, error: errorOf(error) };
-    }
   },
 };

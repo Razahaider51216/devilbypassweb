@@ -183,18 +183,6 @@ export const adminUpdateUser = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const adminSetPassword = createServerFn({ method: "POST" })
-  .middleware([requireAuth])
-  .validator((input: unknown) =>
-    z.object({ userId: z.string().uuid(), password: z.string().min(8).max(72) }).parse(input),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context);
-    const { changePassword } = await import("@/integrations/local/auth.server");
-    changePassword(data.userId, data.password);
-    return { ok: true };
-  });
-
 export const adminDeleteUser = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((input: unknown) => z.object({ userId: z.string().uuid() }).parse(input))

@@ -42,7 +42,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
         {
           title: "3. บัญชีและความปลอดภัย",
           body: [
-            "คุณต้องให้ข้อมูลบัญชีที่ถูกต้อง เก็บรหัสผ่านเป็นความลับ และแจ้งเราทันทีเมื่อสงสัยว่าบัญชีถูกเข้าถึงโดยไม่ได้รับอนุญาต",
+            "บัญชี DevilDev เชื่อมกับ Discord โปรดดูแลบัญชี Discord ของคุณและแจ้งเราทันทีเมื่อสงสัยว่าบัญชีถูกเข้าถึงโดยไม่ได้รับอนุญาต",
             "เราอาจจำกัด ระงับ หรือยกเลิกบัญชีที่ละเมิดข้อกำหนด สร้างความเสี่ยงต่อระบบ หรือใช้งานในลักษณะที่ผิดปกติ",
           ],
         },
@@ -109,7 +109,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
         {
           title: "3. Accounts and security",
           body: [
-            "Provide accurate account information, keep your password confidential and notify us if you suspect unauthorized access.",
+            "Your DevilDev account is linked to Discord. Protect your Discord account and notify us if you suspect unauthorized access.",
             "We may limit, suspend or close accounts that violate these terms, create a security risk or show abusive activity.",
           ],
         },
@@ -164,7 +164,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
         {
           title: "1. ข้อมูลที่เราเก็บ",
           body: [
-            "ข้อมูลบัญชี เช่น ชื่อผู้ใช้ อีเมล รหัสผู้ใช้ แพ็กเกจ วันที่สมัคร และสถานะบัญชี รหัสผ่านถูกจัดการโดยระบบยืนยันตัวตนและไม่ได้เก็บในรูปแบบที่อ่านได้",
+            "ข้อมูลบัญชีจาก Discord เช่น รหัสผู้ใช้ ชื่อที่แสดง ชื่อผู้ใช้ รูปโปรไฟล์ และอีเมล รวมถึงแพ็กเกจ วันที่สมัคร และสถานะบัญชี เราไม่เก็บรหัสผ่าน Discord",
             "ข้อมูลการใช้งาน เช่น ลิงก์ที่ส่ง ผลลัพธ์ สถานะ เวลาประมวลผล จำนวนครั้งที่ใช้ และข้อมูลทางเทคนิคที่จำเป็นต่อการตรวจสอบข้อผิดพลาดและการใช้งานผิดปกติ",
           ],
         },
@@ -200,7 +200,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
           title: "6. ความปลอดภัย",
           body: [
             "เราใช้มาตรการทางเทคนิคและการจัดการที่เหมาะสม เช่น การควบคุมสิทธิ์ การเข้ารหัสระหว่างส่ง และการบันทึกเหตุการณ์ อย่างไรก็ตาม ไม่มีระบบออนไลน์ใดปลอดภัยได้ทั้งหมด",
-            "โปรดใช้รหัสผ่านที่ไม่ซ้ำกันและแจ้งเราทันทีหากพบกิจกรรมที่น่าสงสัย",
+            "โปรดเปิดใช้มาตรการรักษาความปลอดภัยของ Discord และแจ้งเราทันทีหากพบกิจกรรมที่น่าสงสัย",
           ],
         },
         {
@@ -231,7 +231,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
         {
           title: "1. Information we collect",
           body: [
-            "Account data such as username, email, user ID, plan, registration date and account status. Passwords are handled by our authentication provider and are not stored in readable form.",
+            "Discord account data such as user ID, display name, username, avatar and email, plus your plan, registration date and account status. We do not store your Discord password.",
             "Usage data such as submitted links, results, status, processing time, usage counts and technical information needed to diagnose errors or abuse.",
           ],
         },
@@ -267,7 +267,7 @@ const documents: Record<DocumentKind, Record<Lang, LegalCopy>> = {
           title: "6. Security",
           body: [
             "We use reasonable technical and organizational safeguards, including access controls, encryption in transit and event logging. No online system can be completely secure.",
-            "Use a unique password and contact us promptly if you notice suspicious activity.",
+            "Use Discord's account-security features and contact us promptly if you notice suspicious activity.",
           ],
         },
         {

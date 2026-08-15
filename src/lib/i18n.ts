@@ -274,8 +274,8 @@ export const dictionary: Record<Lang, Copy> = {
       sub: "Three steps from a locked link to the real key.",
       steps: [
         {
-          title: "1. Create an account",
-          body: "Register with a username, email and password. Every new account starts on the Free plan with 5 bypasses per day.",
+          title: "1. Sign in with Discord",
+          body: "Continue with your Discord account. Your Discord name and avatar become your DevilDev profile, and every new account starts on the Free plan.",
         },
         {
           title: "2. Paste your link",
@@ -320,7 +320,7 @@ export const dictionary: Record<Lang, Copy> = {
         },
         {
           title: "Accounts",
-          body: "You are responsible for your account and password. One person, one account. Accounts that abuse the service may be suspended without refund.",
+          body: "You are responsible for your linked Discord account. One person, one account. Accounts that abuse the service may be suspended without refund.",
         },
         {
           title: "Payments & refunds",
@@ -373,7 +373,12 @@ export const dictionary: Record<Lang, Copy> = {
       reject: "Reject",
       discordUrl: "Discord invite URL",
       discordTag: "Discord username",
-      stats: { users: "Users", pro: "Pro users", pending: "Pending requests", bypasses: "Bypasses" },
+      stats: {
+        users: "Users",
+        pro: "Pro users",
+        pending: "Pending requests",
+        bypasses: "Bypasses",
+      },
       denied: "Administrators only.",
     },
     common: {
@@ -471,8 +476,7 @@ export const dictionary: Record<Lang, Copy> = {
       purchaseDialogTitle: "สั่งซื้อผ่าน Discord",
       purchaseDialogSub:
         "ทักหาเราใน Discord พร้อมแจ้งชื่อผู้ใช้และแพ็กเกจที่ต้องการ ทีมงานจะเปิดสิทธิ์ให้ด้วยตนเอง",
-      discordNotConfigured:
-        "ยังไม่ได้ตั้งค่าลิงก์ Discord กรุณาลองใหม่ภายหลัง หรือติดต่อทีมงาน",
+      discordNotConfigured: "ยังไม่ได้ตั้งค่าลิงก์ Discord กรุณาลองใหม่ภายหลัง หรือติดต่อทีมงาน",
       close: "ปิด",
       mostPopular: "ยอดนิยม",
       oneTime: "จ่ายครั้งเดียว",
@@ -495,8 +499,8 @@ export const dictionary: Record<Lang, Copy> = {
       sub: "แค่ไม่กี่ขั้นตอนก็ได้คีย์จริง",
       steps: [
         {
-          title: "1. สมัครสมาชิก",
-          body: "สมัครด้วยชื่อผู้ใช้ อีเมล และรหัสผ่าน ทุกบัญชีใหม่เริ่มต้นที่แพ็กเกจฟรี ใช้ได้วันละ 5 ลิงก์",
+          title: "1. เข้าสู่ระบบด้วย Discord",
+          body: "เข้าสู่ระบบด้วยบัญชี Discord ชื่อและรูป Discord จะเป็นโปรไฟล์ DevilDev และทุกบัญชีใหม่เริ่มต้นที่แพ็กเกจฟรี",
         },
         {
           title: "2. วางลิงก์",
@@ -538,7 +542,7 @@ export const dictionary: Record<Lang, Copy> = {
         },
         {
           title: "บัญชีผู้ใช้",
-          body: "คุณต้องรับผิดชอบบัญชีและรหัสผ่านของตนเอง หนึ่งคนต่อหนึ่งบัญชี บัญชีที่ใช้งานผิดวัตถุประสงค์อาจถูกระงับโดยไม่คืนเงิน",
+          body: "คุณต้องรับผิดชอบบัญชี Discord ที่เชื่อมต่อ หนึ่งคนต่อหนึ่งบัญชี บัญชีที่ใช้งานผิดวัตถุประสงค์อาจถูกระงับโดยไม่คืนเงิน",
         },
         {
           title: "การชำระเงินและการคืนเงิน",
