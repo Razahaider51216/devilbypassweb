@@ -43,6 +43,69 @@ function fail(errorCode: NonNullable<BypassResult["errorCode"]>, result = ""): B
   return { status: "failed", result, time: null, expiresAt: null, errorCode, remaining: null };
 }
 
+type IxcorePayload = {
+  status?: unknown;
+  jobId?: unknown;
+  result?: unknown;
+  time?: unknown;
+  expires_at?: unknown;
+};
+
+function upstreamErrorCode(status: number): NonNullable<BypassResult["errorCode"]> {
+  if (status === 401 || status === 403) return "unauthorized";
+  if (status === 429) return "rate_limited";
+  return "upstream";
+}
+
+async function ixcoreRequest(url: string, apiKey: string, signal: AbortSignal) {
+  const response = await fetch(url, {
+    headers: { "x-api-key": apiKey, accept: "application/json" },
+    signal,
+  });
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (declaredLength > 1_000_000) throw new Error("Upstream response too large");
+  const raw = await response.text();
+  if (raw.length > 1_000_000) throw new Error("Upstream response too large");
+  let payload: IxcorePayload = {};
+  try {
+    payload = JSON.parse(raw) as IxcorePayload;
+  } catch {
+    // The HTTP status below still determines the public error category.
+  }
+  return { response, payload };
+}
+
+function resultFromPayload(payload: IxcorePayload): BypassResult {
+  const succeeded = payload.status === "succeed";
+  const result =
+    typeof payload.result === "string" ? payload.result.slice(0, 10_000) : "No result returned.";
+  return {
+    status: succeeded ? "succeed" : "failed",
+    result,
+    time:
+      typeof payload.time === "string" || typeof payload.time === "number"
+        ? String(payload.time)
+        : null,
+    expiresAt: typeof payload.expires_at === "string" ? payload.expires_at : null,
+    errorCode: succeeded ? null : "upstream",
+    remaining: null,
+  };
+}
+
+function waitForPoll(milliseconds: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, milliseconds);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
 export const bypassLink = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .validator((input: unknown) => BypassInput.parse(input))
@@ -95,57 +158,55 @@ export const bypassLink = createServerFn({ method: "POST" })
       return fail(allowedCodes.has(requestedCode) ? requestedCode : "upstream");
     }
 
-    const endpoint = `https://api.ixcore.xyz/v1/bypass?url=${encodeURIComponent(checked.url)}`;
+    const startEndpoint = `https://api.ixcore.xyz/rent/v2/bypass?url=${encodeURIComponent(checked.url)}`;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 90_000);
 
     let outcome: BypassResult;
     try {
-      const response = await fetch(endpoint, {
-        headers: { "x-api-key": apiKey, accept: "application/json" },
-        signal: controller.signal,
-      });
-
-      const declaredLength = Number(response.headers.get("content-length") ?? 0);
-      if (declaredLength > 1_000_000) throw new Error("Upstream response too large");
-      const raw = await response.text();
-      if (raw.length > 1_000_000) throw new Error("Upstream response too large");
-
-      let payload: Record<string, unknown> = {};
-      try {
-        payload = JSON.parse(raw) as Record<string, unknown>;
-      } catch {
-        payload = {};
-      }
-
-      if (!response.ok) {
+      const started = await ixcoreRequest(startEndpoint, apiKey, controller.signal);
+      if (!started.response.ok) {
         outcome = {
           status: "failed",
-          result: "The upstream service rejected the request.",
+          result:
+            typeof started.payload.result === "string"
+              ? started.payload.result.slice(0, 10_000)
+              : "The upstream service rejected the request.",
           time: null,
           expiresAt: null,
-          errorCode:
-            response.status === 401 || response.status === 403
-              ? "unauthorized"
-              : response.status === 429
-                ? "rate_limited"
-                : "upstream",
+          errorCode: upstreamErrorCode(started.response.status),
           remaining: null,
         };
+      } else if (started.payload.status === "succeed") {
+        outcome = resultFromPayload(started.payload);
+      } else if (
+        started.payload.status !== "pending" ||
+        typeof started.payload.jobId !== "string" ||
+        !started.payload.jobId.trim()
+      ) {
+        outcome = resultFromPayload(started.payload);
       } else {
-        const succeeded = payload["status"] === "succeed";
-        outcome = {
-          status: succeeded ? "succeed" : "failed",
-          result:
-            typeof payload["result"] === "string"
-              ? (payload["result"] as string).slice(0, 10_000)
-              : "No result returned.",
-          time: typeof payload["time"] === "string" ? (payload["time"] as string) : null,
-          expiresAt:
-            typeof payload["expires_at"] === "string" ? (payload["expires_at"] as string) : null,
-          errorCode: succeeded ? null : "upstream",
-          remaining: null,
-        };
+        const jobId = started.payload.jobId.trim();
+        outcome = fail("timeout", "The bypass request timed out.");
+        for (let attempt = 0; attempt < 30; attempt += 1) {
+          await waitForPoll(3_000, controller.signal);
+          const jobEndpoint = `https://api.ixcore.xyz/rent/v2/job/${encodeURIComponent(jobId)}`;
+          const polled = await ixcoreRequest(jobEndpoint, apiKey, controller.signal);
+          if (!polled.response.ok) {
+            outcome = {
+              ...fail(
+                upstreamErrorCode(polled.response.status),
+                typeof polled.payload.result === "string"
+                  ? polled.payload.result.slice(0, 10_000)
+                  : "The upstream service rejected the job request.",
+              ),
+            };
+            break;
+          }
+          if (polled.payload.status === "pending") continue;
+          outcome = resultFromPayload(polled.payload);
+          break;
+        }
       }
     } catch (error) {
       const aborted = error instanceof Error && error.name === "AbortError";

@@ -13,6 +13,7 @@ export type SupportedSite = {
   category: string;
   display_order: number;
   is_visible: boolean;
+  logo_url: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -27,6 +28,13 @@ export function normalizeDomain(raw: string): string {
   value = value.replace(/^www\./, "");
   value = value.replace(/\/+$/, "");
   return value;
+}
+
+/** Returns a favicon URL derived from the site's domain; no manual upload is required. */
+export function siteLogoUrl(domainOrPattern: string): string | null {
+  const host = normalizeDomain(domainOrPattern).split("/")[0]?.replace(/^\*\./, "");
+  if (!host || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
 }
 
 const UNSAFE = /[<>"'`\\]|javascript:|data:|vbscript:|on[a-z]+=/i;
@@ -49,7 +57,7 @@ const SiteInput = z.object({
       (v) => /^[a-z0-9._\-/*:?=&%+]+$/i.test(normalizeDomain(v)),
       "Invalid domain or pattern",
     ),
-  status: z.enum(["available", "maintenance", "disabled"]).default("maintenance"),
+  status: z.enum(["available", "maintenance", "disabled"]).default("available"),
   category: z
     .string()
     .trim()
@@ -73,7 +81,10 @@ export const getSupportedSites = createServerFn({ method: "GET" }).handler(
       .order("name", { ascending: true })
       .limit(300);
     if (error) throw new Error("Unable to load supported sites");
-    return (data ?? []) as SupportedSite[];
+    return (data ?? []).map((site: Omit<SupportedSite, "logo_url">) => ({
+      ...site,
+      logo_url: siteLogoUrl(site.domain_or_pattern),
+    }));
   },
 );
 
@@ -96,7 +107,10 @@ export const adminListSites = createServerFn({ method: "GET" })
       .select("*")
       .order("display_order", { ascending: true })
       .order("name", { ascending: true });
-    return (data ?? []) as SupportedSite[];
+    return (data ?? []).map((site: Omit<SupportedSite, "logo_url">) => ({
+      ...site,
+      logo_url: siteLogoUrl(site.domain_or_pattern),
+    }));
   });
 
 export const adminSaveSite = createServerFn({ method: "POST" })

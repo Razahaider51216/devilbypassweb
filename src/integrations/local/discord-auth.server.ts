@@ -78,10 +78,16 @@ function internalUsername(discordUsername: string, discordId: string) {
 function signInDiscordUser(discord: DiscordUser) {
   const db = getSqlite();
   const discordEmail = discord.email?.trim().toLowerCase() || null;
+  const ownerDiscordId = (
+    process.env["OWNER_DISCORD_ID"] ||
+    process.env["ADMIN_DISCORD_ID"] ||
+    ""
+  ).trim();
+  const isOwner = ownerDiscordId.length > 0 && discord.id === ownerDiscordId;
   let user = db.prepare("SELECT id,email FROM users WHERE discord_id=?").get(discord.id) as
     LocalUser | undefined;
 
-  // A verified Discord email safely links an existing password account.
+  // A verified Discord email links a legacy local account to Discord.
   if (!user && discordEmail && discord.verified) {
     user = db
       .prepare("SELECT id,email FROM users WHERE email=? COLLATE NOCASE")
@@ -94,10 +100,6 @@ function signInDiscordUser(discord: DiscordUser) {
     const id = randomUUID();
     const email = discordEmail || `discord-${discord.id}@users.invalid`;
     const username = internalUsername(discord.username, discord.id);
-    const isAdmin = Boolean(
-      discordEmail && process.env["ADMIN_EMAIL"]?.trim().toLowerCase() === discordEmail,
-    );
-
     db.exec("BEGIN IMMEDIATE");
     try {
       db.prepare(
@@ -121,7 +123,7 @@ function signInDiscordUser(discord: DiscordUser) {
       db.prepare("INSERT INTO user_roles(id,user_id,role,created_at) VALUES (?,?,?,?)").run(
         randomUUID(),
         id,
-        isAdmin ? "admin" : "user",
+        isOwner ? "admin" : "user",
         stamp,
       );
       db.exec("COMMIT");
@@ -142,6 +144,14 @@ function signInDiscordUser(discord: DiscordUser) {
       stamp,
       user.id,
     );
+  }
+
+  // The configured Discord owner always regains back-office access on sign-in,
+  // including when their account was created before OWNER_DISCORD_ID was set.
+  if (isOwner) {
+    db.prepare(
+      "INSERT OR IGNORE INTO user_roles(id,user_id,role,created_at) VALUES (?,?,'admin',?)",
+    ).run(randomUUID(), user.id, stamp);
   }
 
   return { token: sessionForUser(user), user };

@@ -189,7 +189,7 @@ function migrate(db: DatabaseSync) {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       domain_or_pattern TEXT NOT NULL UNIQUE,
-      status TEXT NOT NULL DEFAULT 'maintenance',
+      status TEXT NOT NULL DEFAULT 'available',
       category TEXT NOT NULL DEFAULT '',
       display_order INTEGER NOT NULL DEFAULT 0,
       is_visible INTEGER NOT NULL DEFAULT 1,
@@ -222,6 +222,12 @@ function migrate(db: DatabaseSync) {
   db.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS users_discord_id_idx ON users(discord_id) WHERE discord_id IS NOT NULL",
   );
+
+  const schemaVersion = db.prepare("PRAGMA user_version").get() as { user_version: number };
+  if (schemaVersion.user_version < 1) {
+    db.exec("UPDATE supported_sites SET status='available' WHERE status='maintenance'");
+    db.exec("PRAGMA user_version = 1");
+  }
 }
 
 function seed(db: DatabaseSync) {
@@ -355,7 +361,7 @@ function seed(db: DatabaseSync) {
   ];
   const siteInsert = db.prepare(`INSERT OR IGNORE INTO supported_sites
     (id,name,domain_or_pattern,status,display_order,is_visible,created_at,updated_at)
-    VALUES (?,?,?,'maintenance',?,1,?,?)`);
+    VALUES (?,?,?,'available',?,1,?,?)`);
   sites.forEach(([name, domain], index) =>
     siteInsert.run(randomUUID(), name!, domain!, (index + 1) * 10, stamp, stamp),
   );

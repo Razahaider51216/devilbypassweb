@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Save, Trash2, X } from "lucide-react";
+import { Globe2, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   adminDeleteSite,
@@ -37,7 +37,7 @@ type Draft = {
 const empty: Draft = {
   name: "",
   domain_or_pattern: "",
-  status: "maintenance",
+  status: "available",
   category: "",
   display_order: 0,
   is_visible: true,
@@ -171,9 +171,7 @@ export function SitesTab({ lang, btn, btnSolid }: { lang: Lang; btn: string; btn
                 min={0}
                 max={9999}
                 value={draft.display_order}
-                onChange={(e) =>
-                  setDraft({ ...draft, display_order: Number(e.target.value) || 0 })
-                }
+                onChange={(e) => setDraft({ ...draft, display_order: Number(e.target.value) || 0 })}
                 className={field}
               />
             </label>
@@ -210,19 +208,34 @@ export function SitesTab({ lang, btn, btnSolid }: { lang: Lang; btn: string; btn
               key={site.id}
               className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3.5"
             >
-              <div className="min-w-0">
-                <p className="truncate text-xs font-bold">
-                  {site.name}
-                  {!site.is_visible ? (
-                    <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
-                      {m.siteHidden}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="truncate font-mono text-[10px] text-muted-foreground">
-                  {site.domain_or_pattern} · #{site.display_order}
-                  {site.category ? ` · ${site.category}` : ""}
-                </p>
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-background">
+                  {site.logo_url ? (
+                    <img
+                      src={site.logo_url}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      className="h-6 w-6 rounded-md"
+                    />
+                  ) : (
+                    <Globe2 className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-bold">
+                    {site.name}
+                    {!site.is_visible ? (
+                      <span className="ml-2 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                        {m.siteHidden}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="truncate font-mono text-[10px] text-muted-foreground">
+                    {site.domain_or_pattern} · #{site.display_order}
+                    {site.category ? ` · ${site.category}` : ""}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span className="rounded-full border border-border px-2 py-1 text-[10px] font-semibold">
