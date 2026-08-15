@@ -59,7 +59,7 @@ function AuthPage() {
   }, [session, navigate]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-5 py-12 text-foreground">
+    <main className="flex min-h-screen items-center justify-center bg-background/80 px-5 py-12 text-foreground">
       <div className="w-full max-w-md">
         <Link
           to="/"

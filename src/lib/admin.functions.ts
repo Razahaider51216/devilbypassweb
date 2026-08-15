@@ -28,6 +28,10 @@ export type AdminUser = {
   id: string;
   username: string;
   email: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  discordUsername: string | null;
+  discordId: string | null;
   planCode: string;
   planExpiresAt: string | null;
   daysLeft: number | null;
@@ -73,7 +77,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
     let query = db
       .from("profiles")
       .select(
-        "id, username, email, plan_code, plan_expires_at, used_today, usage_date, total_used, is_banned, bypass_disabled, admin_note, created_at",
+        "id, username, email, display_name, avatar_url, discord_username, plan_code, plan_expires_at, used_today, usage_date, total_used, is_banned, bypass_disabled, admin_note, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(200);
@@ -83,6 +87,16 @@ export const adminListUsers = createServerFn({ method: "GET" })
     const { data: rows } = await query;
     const { data: roles } = await db.from("user_roles").select("user_id, role").eq("role", "admin");
     const adminIds = new Set((roles ?? []).map((r: { user_id: string }) => r.user_id));
+    const profileIds = (rows ?? []).map((row: { id: string }) => row.id);
+    const accountResult = profileIds.length
+      ? await db.from("users").select("id, discord_id").in("id", profileIds)
+      : { data: [] };
+    const discordIds = new Map(
+      (accountResult.data ?? []).map((account: { id: string; discord_id: string | null }) => [
+        account.id,
+        account.discord_id,
+      ]),
+    );
     const today = new Date().toISOString().slice(0, 10);
 
     return (rows ?? []).map(
@@ -90,6 +104,9 @@ export const adminListUsers = createServerFn({ method: "GET" })
         id: string;
         username: string;
         email: string | null;
+        display_name: string | null;
+        avatar_url: string | null;
+        discord_username: string | null;
         plan_code: string;
         plan_expires_at: string | null;
         used_today: number;
@@ -103,6 +120,10 @@ export const adminListUsers = createServerFn({ method: "GET" })
         id: r.id,
         username: r.username,
         email: r.email,
+        displayName: r.display_name,
+        avatarUrl: r.avatar_url,
+        discordUsername: r.discord_username,
+        discordId: discordIds.get(r.id) ?? null,
         planCode: r.plan_code,
         planExpiresAt: r.plan_expires_at,
         daysLeft: r.plan_expires_at

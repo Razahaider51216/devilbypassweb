@@ -146,7 +146,7 @@ function AdminPage() {
   const activeLabel = sections.find((s) => s.value === section)?.label ?? x.overview;
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background/80 text-foreground">
       <div className="mx-auto w-full max-w-5xl px-4 pb-24 pt-8">
         <Link
           to="/"
@@ -223,7 +223,7 @@ function AdminPage() {
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center text-foreground">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-background/80 px-6 text-center text-foreground">
       {children}
     </main>
   );
@@ -400,13 +400,33 @@ function UserRow({
         onClick={onToggle}
         className="flex w-full items-start justify-between gap-3 text-left"
       >
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 truncate text-sm font-semibold">
-            {user.username}
-            {user.isAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
-            {user.isBanned ? <Ban className="h-3.5 w-3.5 text-destructive" /> : null}
-          </p>
-          <p className="truncate text-[11px] text-muted-foreground">{user.email}</p>
+        <div className="flex min-w-0 items-center gap-3">
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+            />
+          ) : (
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold">
+              {(user.displayName || user.username).slice(0, 1).toUpperCase()}
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 truncate text-sm font-semibold">
+              {user.displayName || user.username}
+              {user.isAdmin ? <ShieldCheck className="h-3.5 w-3.5" /> : null}
+              {user.isBanned ? <Ban className="h-3.5 w-3.5 text-destructive" /> : null}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground">
+              {user.discordUsername ? `@${user.discordUsername}` : user.email}
+            </p>
+            {user.discordId ? (
+              <p className="truncate font-mono text-[10px] text-muted-foreground">
+                Discord ID: {user.discordId}
+              </p>
+            ) : null}
+          </div>
         </div>
         <div className="shrink-0 text-right text-[11px] text-muted-foreground">
           <p className="font-semibold text-foreground">{user.planCode}</p>

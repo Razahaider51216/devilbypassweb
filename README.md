@@ -23,7 +23,11 @@ npm run dev
 
 ## บัญชีผู้ดูแล
 
-กำหนด `ADMIN_EMAIL`, `ADMIN_PASSWORD` และ `ADMIN_USERNAME` ใน `.env` แอปจะสร้างบัญชีผู้ดูแลให้เมื่อเริ่มทำงาน หรือจะเลื่อนสิทธิ์บัญชีที่ใช้อีเมลตรงกับ `ADMIN_EMAIL` ให้เป็นผู้ดูแลโดยอัตโนมัติ
+กำหนด `OWNER_DISCORD_ID` เป็น Discord User ID ของเจ้าของเว็บ บัญชี Discord ที่มี ID ตรงกันจะได้รับสิทธิ์แอดมินอัตโนมัติทุกครั้งที่เข้าสู่ระบบ จากนั้นเปิดหลังบ้านได้ที่ `/admin`
+
+## IXCore bypass API
+
+กำหนด `IXCORE_API_KEY` ใน environment ของเซิร์ฟเวอร์ ระบบจะสร้างงานผ่าน `/rent/v2/bypass` และตรวจผลจาก `/rent/v2/job/{jobId}` ทุก 3 วินาที โดยส่ง API key ใน header `x-api-key`
 
 ## คำสั่ง
 
@@ -35,8 +39,11 @@ npm run dev
 
 สำหรับ production ให้รัน `npm run build` แล้ว `npm start` และ mount โฟลเดอร์ `DATA_DIR` เป็น persistent volume
 
+### Render และการเก็บข้อมูลถาวร
+
+SQLite และรูปที่อัปโหลดถูกเก็บไว้ในโฟลเดอร์ `DATA_DIR` หากใช้ Render ให้เพิ่ม
+Persistent Disk โดยกำหนด mount path เป็น `/var/data` แล้วตั้ง environment variable
+`DATA_DIR=/var/data` ให้ตรงกัน หากไม่มี disk ข้อมูลจะหายเมื่อ service restart, spin down
+หรือ deploy ใหม่ โดย Render Free Web Service ไม่รองรับ Persistent Disk
+
 เปิดเว็บในเบราว์เซอร์ที่ `http://localhost:3000` (`0.0.0.0` เป็น bind address ของเซิร์ฟเวอร์ ไม่ใช่ URL สำหรับเปิดเว็บ)
-
-## การกู้รหัสผ่าน
-
-หากต้องการส่งรหัส OTP ทางอีเมล ให้กำหนด `RESEND_API_KEY` และ `RESET_FROM_EMAIL` ในโหมดพัฒนา รหัสจะถูกพิมพ์ใน server console เมื่อยังไม่ได้ตั้งค่าผู้ส่งอีเมล

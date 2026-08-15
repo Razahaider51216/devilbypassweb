@@ -21,7 +21,12 @@ function discordConfig(request: Request) {
   const clientId = process.env["DISCORD_CLIENT_ID"]?.trim();
   const clientSecret = process.env["DISCORD_CLIENT_SECRET"]?.trim();
   const callback = new URL("/api/auth/discord/callback", request.url).toString();
-  const redirectUri = process.env["DISCORD_REDIRECT_URI"]?.trim() || callback;
+  const configuredRedirect = process.env["DISCORD_REDIRECT_URI"]?.trim();
+  // Render may be configured with either the complete callback URL or only
+  // /api/auth/discord/callback. Discord always requires an absolute URL.
+  const redirectUri = configuredRedirect
+    ? new URL(configuredRedirect, request.url).toString()
+    : callback;
   if (!clientId || !clientSecret) {
     throw new Error("Discord login is not configured");
   }

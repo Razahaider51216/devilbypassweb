@@ -44,16 +44,31 @@ function ChangelogPage() {
 
   const badge = (kind: string) => {
     if (kind === "fix")
-      return { label: x.kindFix, icon: <Wrench className="h-3 w-3" />, cls: "border-destructive/40 text-destructive" };
+      return {
+        label: x.kindFix,
+        icon: <Wrench className="h-3 w-3" />,
+        cls: "border-destructive/40 text-destructive",
+      };
     if (kind === "improve")
-      return { label: x.kindImprove, icon: <Zap className="h-3 w-3" />, cls: "border-border text-muted-foreground" };
-    return { label: x.kindNew, icon: <Sparkles className="h-3 w-3" />, cls: "border-foreground text-foreground" };
+      return {
+        label: x.kindImprove,
+        icon: <Zap className="h-3 w-3" />,
+        cls: "border-border text-muted-foreground",
+      };
+    return {
+      label: x.kindNew,
+      icon: <Sparkles className="h-3 w-3" />,
+      cls: "border-foreground text-foreground",
+    };
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-background/80 text-foreground">
       <div className="mx-auto w-full max-w-2xl px-5 pb-24 pt-8">
-        <Link to="/" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="h-3 w-3" /> {copy.common.back}
         </Link>
 
@@ -71,7 +86,10 @@ function ChangelogPage() {
           {entries.isLoading ? (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
-                <div key={i} className="h-24 animate-pulse rounded-2xl border border-border bg-card" />
+                <div
+                  key={i}
+                  className="h-24 animate-pulse rounded-2xl border border-border bg-card"
+                />
               ))}
             </div>
           ) : rows.length === 0 ? (
@@ -80,10 +98,16 @@ function ChangelogPage() {
             <ol className="relative space-y-4 border-l border-border pl-6">
               {rows.map((row, index) => {
                 const tag = badge(row.kind);
-                const title = lang === "th" ? row.title_th || row.title_en : row.title_en || row.title_th;
-                const body = lang === "th" ? row.body_th || row.body_en : row.body_en || row.body_th;
+                const title =
+                  lang === "th" ? row.title_th || row.title_en : row.title_en || row.title_th;
+                const body =
+                  lang === "th" ? row.body_th || row.body_en : row.body_en || row.body_th;
                 return (
-                  <li key={row.id} className="animate-fade-in" style={{ animationDelay: `${index * 60}ms` }}>
+                  <li
+                    key={row.id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${index * 60}ms` }}
+                  >
                     <span className="absolute -left-[5px] mt-2 h-2.5 w-2.5 rounded-full bg-foreground" />
                     <div className="rounded-2xl border border-border bg-card p-4 transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-[0_0_50px_-25px_rgba(255,255,255,0.4)]">
                       <div className="flex flex-wrap items-center gap-2">

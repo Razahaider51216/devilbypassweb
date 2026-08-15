@@ -182,7 +182,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <SiteBackground />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <div className="relative z-10 min-h-screen">
+        <Outlet />
+      </div>
       <Toaster />
     </QueryClientProvider>
   );

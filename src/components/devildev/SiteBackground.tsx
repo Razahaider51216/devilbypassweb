@@ -15,7 +15,7 @@ export function SiteBackground() {
   if (!url) return null;
 
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10">
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
       <img src={url} alt="" className="h-full w-full object-cover" />
       <div className="absolute inset-0 bg-background/85" />
       <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/60 to-background/90" />
