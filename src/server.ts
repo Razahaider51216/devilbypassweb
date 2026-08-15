@@ -89,7 +89,10 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const requestUrl = new URL(request.url);
-      if (request.method === "GET" && requestUrl.pathname === "/api/auth/discord") {
+      if (
+        request.method === "GET" &&
+        (requestUrl.pathname === "/login" || requestUrl.pathname === "/api/auth/discord")
+      ) {
         const { beginDiscordAuth } = await import("./integrations/local/discord-auth.server");
         return hardenResponse(request, beginDiscordAuth(request));
       }

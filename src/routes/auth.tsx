@@ -81,7 +81,7 @@ function AuthPage() {
               : "Use your Discord account to access DevilDev. Your Discord name and avatar will be shown on your profile."}
           </p>
 
-          <form action="/api/auth/discord" method="get" className="mt-6">
+          <form action="/login" method="get" target="_self" className="mt-6">
             <button
               type="submit"
               className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#5865F2] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#4752C4]"
