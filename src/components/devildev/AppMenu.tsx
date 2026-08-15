@@ -266,14 +266,13 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
                     <>
                       <p className="text-sm font-semibold">{copy.auth.loginTitle}</p>
                       <p className="mt-1 text-xs text-muted-foreground">{copy.auth.loginSub}</p>
-                      <form action="/login" method="get" target="_self" className="mt-4">
-                        <button
-                          type="submit"
-                          className="inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background"
-                        >
-                          {copy.nav.login}
-                        </button>
-                      </form>
+                      <a
+                        href="/login"
+                        target="_self"
+                        className="mt-4 inline-flex w-full cursor-pointer items-center justify-center rounded-xl bg-foreground px-4 py-2 text-xs font-semibold text-background"
+                      >
+                        {copy.nav.login}
+                      </a>
                     </>
                   )}
                 </div>

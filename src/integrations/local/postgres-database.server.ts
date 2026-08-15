@@ -43,7 +43,13 @@ function databaseUrl() {
   const value = process.env["DATABASE_URL"]?.trim();
   if (!value) throw new Error("DATABASE_URL is not configured");
   if (!/^postgres(?:ql)?:\/\//i.test(value)) throw new Error("DATABASE_URL must be PostgreSQL");
-  return value;
+
+  const parsed = new URL(value);
+  const sslMode = parsed.searchParams.get("sslmode")?.toLowerCase();
+  if (sslMode === "prefer" || sslMode === "require" || sslMode === "verify-ca") {
+    parsed.searchParams.set("sslmode", "verify-full");
+  }
+  return parsed.toString();
 }
 
 function getPool() {

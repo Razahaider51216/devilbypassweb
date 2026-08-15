@@ -64,10 +64,12 @@ function hardenResponse(request: Request, response: Response): Response {
   headers.delete("x-powered-by");
 
   const requestUrl = new URL(request.url);
+  const contentType = headers.get("content-type") ?? "";
   const isSensitiveResponse =
     request.method !== "GET" ||
     headers.has("set-cookie") ||
-    (headers.get("content-type") ?? "").includes("application/json") ||
+    contentType.includes("application/json") ||
+    contentType.includes("text/html") ||
     requestUrl.pathname.includes("server");
   if (isSensitiveResponse) {
     headers.set("cache-control", "no-store, max-age=0");
