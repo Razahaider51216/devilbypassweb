@@ -144,7 +144,7 @@ function signInDiscordUser(discord: DiscordUser) {
     );
   }
 
-  return sessionForUser(user);
+  return { token: sessionForUser(user), user };
 }
 
 export function beginDiscordAuth(request: Request) {
