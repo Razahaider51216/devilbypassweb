@@ -53,6 +53,7 @@ export const getChangelog = createServerFn({ method: "GET" }).handler(
 export type PublicBypass = {
   id: string;
   username: string;
+  avatarUrl: string | null;
   key: string;
   createdAt: string;
   isPro: boolean;
@@ -77,23 +78,28 @@ export const getRecentBypasses = createServerFn({ method: "GET" }).handler(
     type LogRow = { id: string; result: string; created_at: string; user_id: string };
     const typedLogs = logs as LogRow[];
     const ids = [...new Set(typedLogs.map((row) => row.user_id).filter(Boolean))] as string[];
-    const names = new Map<string, string>();
+    const profilesById = new Map<string, { username: string; avatarUrl: string | null }>();
     const pro = new Set<string>();
     if (ids.length > 0) {
       const { data: profiles } = await database
         .from("profiles")
-        .select("id, username, plan_code")
+        .select("id, username, display_name, avatar_url, plan_code")
         .in("id", ids);
       for (const p of profiles ?? []) {
-        names.set(p.id, p.username ?? "anonymous");
+        profilesById.set(p.id, {
+          username: p.display_name || p.username || "anonymous",
+          avatarUrl: p.avatar_url || null,
+        });
         if (p.plan_code && p.plan_code !== "free") pro.add(p.id);
       }
     }
 
     return typedLogs.map((row) => {
+      const profile = row.user_id ? profilesById.get(row.user_id) : null;
       return {
         id: row.id,
-        username: (row.user_id ? names.get(row.user_id) : null) ?? "anonymous",
+        username: profile?.username ?? "anonymous",
+        avatarUrl: profile?.avatarUrl ?? null,
         // Never expose any substring of a user's bypass result on a public feed.
         key: "••••••••",
         createdAt: row.created_at,

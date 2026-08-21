@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Zap, Crown } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getRecentBypasses, type PublicBypass } from "@/lib/content.functions";
 import type { Lang } from "@/lib/i18n";
 import { extra } from "@/lib/i18n-extra";
@@ -19,8 +20,15 @@ function since(iso: string, lang: Lang) {
 function Row({ item, lang, proLabel }: { item: PublicBypass; lang: Lang; proLabel: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card/70 px-4 py-3 backdrop-blur transition-colors hover:border-foreground/40">
-      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground/10">
-        <Zap className="h-3.5 w-3.5" />
+      <span className="relative h-8 w-8 shrink-0">
+        <Avatar className="h-8 w-8 border border-foreground/20 bg-foreground/10">
+          {item.avatarUrl ? (
+            <AvatarImage src={item.avatarUrl} alt="" className="object-cover" />
+          ) : null}
+          <AvatarFallback className="bg-foreground/10">
+            <Zap className="h-3.5 w-3.5" />
+          </AvatarFallback>
+        </Avatar>
         <span className="pulse absolute inset-0 rounded-full ring-1 ring-foreground/30" />
       </span>
       <div className="min-w-0 flex-1">
@@ -48,7 +56,7 @@ function Row({ item, lang, proLabel }: { item: PublicBypass; lang: Lang; proLabe
 
 export function RecentBypasses({ lang }: { lang: Lang }) {
   const x = extra[lang];
-  
+
   const fetchRecent = useServerFn(getRecentBypasses);
   const { data } = useQuery({
     queryKey: ["recent-bypasses"],
