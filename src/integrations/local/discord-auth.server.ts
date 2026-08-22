@@ -70,6 +70,15 @@ function requestOrigin(request: Request) {
   return `${protocol}://${host}`;
 }
 
+function isLoopbackOrigin(origin: string) {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch {
+    return false;
+  }
+}
+
 function discordConfig(request: Request) {
   const clientId = process.env["DISCORD_CLIENT_ID"]?.trim();
   const clientSecret = process.env["DISCORD_CLIENT_SECRET"]?.trim();
@@ -78,9 +87,17 @@ function discordConfig(request: Request) {
   const configuredRedirect = process.env["DISCORD_REDIRECT_URI"]?.trim();
   // Render may be configured with either the complete callback URL or only
   // /api/auth/discord/callback. Discord always requires an absolute URL.
-  const redirectUri = configuredRedirect
-    ? new URL(configuredRedirect, origin).toString()
-    : callback;
+  let redirectUri = configuredRedirect ? new URL(configuredRedirect, origin).toString() : callback;
+  if (
+    process.env["NODE_ENV"] === "production" &&
+    isLoopbackOrigin(new URL(redirectUri).origin) &&
+    !isLoopbackOrigin(origin)
+  ) {
+    console.warn(
+      `Ignoring production DISCORD_REDIRECT_URI=${redirectUri} because it points to localhost. Using ${callback} instead.`,
+    );
+    redirectUri = callback;
+  }
   if (!clientId || !clientSecret) {
     throw new Error("Discord login is not configured");
   }
@@ -113,7 +130,7 @@ function authRedirect(request: Request, key: "discord_session" | "discord_error"
   });
 }
 
-async function discordErrorMessage(response: Response) {
+async function discordErrorMessage(response: Response, redirectUri: string) {
   let body = "";
   try {
     body = await response.text();
@@ -121,9 +138,9 @@ async function discordErrorMessage(response: Response) {
     // The status is still enough to guide the operator when the body is unreadable.
   }
   console.error(
-    `Discord token exchange failed with ${response.status} ${response.statusText}${body ? `: ${body}` : ""}`,
+    `Discord token exchange failed with ${response.status} ${response.statusText} for redirect_uri=${redirectUri}${body ? `: ${body}` : ""}`,
   );
-  return "Discord rejected the login request. Please verify the Discord Redirect URI and client secret.";
+  return `Discord rejected the login request. Redirect URI in use: ${redirectUri}`;
 }
 
 function avatarUrl(user: DiscordUser) {
@@ -301,7 +318,7 @@ export async function finishDiscordAuth(request: Request) {
         redirect_uri: redirectUri,
       }),
     });
-    if (!tokenResponse.ok) throw new Error(await discordErrorMessage(tokenResponse));
+    if (!tokenResponse.ok) throw new Error(await discordErrorMessage(tokenResponse, redirectUri));
     const token = (await tokenResponse.json()) as { access_token?: string; token_type?: string };
     if (!token.access_token) throw new Error("Discord did not return an access token");
 
