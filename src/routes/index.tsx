@@ -27,17 +27,17 @@ const COOLDOWN_MS = 30_000;
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DevilDev — Link Bypass" },
+      { title: "DevilBypass — Link Bypass" },
       {
         name: "description",
         content:
-          "DevilDev unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
       },
-      { property: "og:title", content: "DevilDev — Link Bypass" },
+      { property: "og:title", content: "DevilBypass — Link Bypass" },
       {
         property: "og:description",
         content:
-          "DevilDev unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

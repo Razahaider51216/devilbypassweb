@@ -76,26 +76,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DevilDev — Link Bypass" },
+      { title: "DevilBypass — Link Bypass" },
       {
         name: "description",
         content:
-          "DevilDev unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
       },
-      { name: "author", content: "DevilDev" },
-      { property: "og:title", content: "DevilDev — Link Bypass" },
+      { name: "author", content: "DevilBypass" },
+      { property: "og:title", content: "DevilBypass — Link Bypass" },
       {
         property: "og:description",
         content:
-          "DevilDev unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "DevilDev — Link Bypass" },
+      { name: "twitter:title", content: "DevilBypass — Link Bypass" },
       {
         name: "twitter:description",
         content:
-          "DevilDev unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
       },
     ],
     links: [
@@ -103,7 +103,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.svg?v=devilbypass", type: "image/svg+xml" },
+      { rel: "alternate icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
