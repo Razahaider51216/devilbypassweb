@@ -63,3 +63,28 @@ export async function deleteUser(userId: string) {
   }
   getSqlite().prepare("DELETE FROM users WHERE id=?").run(userId);
 }
+
+const discordOnlyAuthResult = {
+  ok: false,
+  reason: "discord_only",
+} as const;
+
+export async function loginUser(_email: string, _password: string) {
+  return discordOnlyAuthResult;
+}
+
+export async function registerUser(_email: string, _password: string, _username: string) {
+  return discordOnlyAuthResult;
+}
+
+export async function createPasswordReset(_email: string) {
+  return discordOnlyAuthResult;
+}
+
+export async function verifyPasswordReset(_email: string, _code: string) {
+  return discordOnlyAuthResult;
+}
+
+export function changePassword(_userId: string, _password: string): never {
+  throw new Error("Email and password authentication is disabled. Use Discord sign-in instead.");
+}

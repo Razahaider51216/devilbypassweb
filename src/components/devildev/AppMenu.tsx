@@ -62,7 +62,7 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const [open, setOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingPlan, setPendingPlan] = useState<{ code: string; label: string } | null>(null);
-  const { session } = useSession();
+  const { session, ready: sessionReady } = useSession();
   const queryClient = useQueryClient();
   const x = extra[lang];
 
@@ -77,13 +77,13 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const account = useQuery({
     queryKey: ["account", session?.user.id ?? "anon"],
     queryFn: () => fetchAccount({}),
-    enabled: Boolean(session),
+    enabled: sessionReady && Boolean(session),
   });
 
   const requests = useQuery({
     queryKey: ["requests", session?.user.id ?? "anon"],
     queryFn: () => fetchRequests({}),
-    enabled: Boolean(session) && open,
+    enabled: sessionReady && Boolean(session) && open,
   });
 
   const purchase = useMutation({
@@ -122,7 +122,9 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const plans = storefront.data?.plans ?? [];
   const me = account.data;
   const hasSession = Boolean(session);
-  const accountFallbackName = session?.user.email?.split("@")[0] || "Discord user";
+  const accountFallbackName = session?.user.email
+    ? session.user.email.split("@")[0]
+    : "Discord user";
   const primaryPurchaseContact =
     purchaseContacts.find((item) => item.kind === "discord" && item.url) ?? null;
   const username = me?.username ?? "";
@@ -264,6 +266,20 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
                         {copy.nav.logout}
                       </button>
                     </>
+                  ) : !sessionReady ? (
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border border-border">
+                        <AvatarFallback className="bg-foreground text-background">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{copy.common.loading}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Checking sign-in status...
+                        </p>
+                      </div>
+                    </div>
                   ) : hasSession ? (
                     <>
                       <div className="flex items-center gap-3">
