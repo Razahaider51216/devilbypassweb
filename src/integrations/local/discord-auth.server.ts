@@ -152,6 +152,15 @@ function avatarUrl(user: DiscordUser) {
   return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
 }
 
+function sessionUser(user: LocalUser, discord: DiscordUser) {
+  return {
+    ...user,
+    displayName: discord.global_name || discord.username,
+    avatarUrl: avatarUrl(discord),
+    discordUsername: discord.username,
+  };
+}
+
 function internalUsername(discordUsername: string, discordId: string) {
   const db = getSqlite();
   const normalized = discordUsername.toLowerCase().replace(/[^a-z0-9_]/g, "") || "discord";
@@ -330,8 +339,10 @@ export async function finishDiscordAuth(request: Request) {
     const discord = (await userResponse.json()) as DiscordUser;
     if (!discord.id || !discord.username) throw new Error("Discord returned an invalid profile");
 
-    const session = await signInDiscordUser(discord);
-    const payload = Buffer.from(JSON.stringify(session)).toString("base64url");
+    const signedIn = await signInDiscordUser(discord);
+    const payload = Buffer.from(
+      JSON.stringify({ token: signedIn.token, user: sessionUser(signedIn.user, discord) }),
+    ).toString("base64url");
     return authRedirect(request, "discord_session", payload);
   } catch (error) {
     return authRedirect(

@@ -125,6 +125,10 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const accountFallbackName = session?.user.email
     ? session.user.email.split("@")[0]
     : "Discord user";
+  const sessionDisplayName = session?.user.displayName || accountFallbackName;
+  const sessionAvatarUrl = session?.user.avatarUrl ?? null;
+  const sessionUsername = session?.user.discordUsername ?? null;
+  const sessionSubtitle = sessionUsername ? `@${sessionUsername}` : session?.user.email;
   const primaryPurchaseContact =
     purchaseContacts.find((item) => item.kind === "discord" && item.url) ?? null;
   const username = me?.username ?? "";
@@ -284,20 +288,21 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
                     <>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border border-border">
+                          {sessionAvatarUrl ? (
+                            <AvatarImage src={sessionAvatarUrl} alt={sessionDisplayName} />
+                          ) : null}
                           <AvatarFallback className="bg-foreground text-background">
                             <UserIcon className="h-4 w-4" />
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{accountFallbackName}</p>
+                          <p className="truncate text-sm font-semibold">{sessionDisplayName}</p>
                           <p className="truncate text-xs text-muted-foreground">
                             {account.isError
                               ? lang === "th"
-                                ? "โหลดโปรไฟล์ไม่สำเร็จ"
-                                : "Profile could not be loaded"
-                              : lang === "th"
-                                ? "กำลังโหลดโปรไฟล์..."
-                                : "Loading profile..."}
+                                ? "กำลังใช้ข้อมูล Discord ชั่วคราว"
+                                : "Using Discord profile for now"
+                              : sessionSubtitle}
                           </p>
                         </div>
                       </div>

@@ -1,4 +1,12 @@
-export type LocalSession = { access_token: string; user: { id: string; email: string } };
+export type LocalSessionUser = {
+  id: string;
+  email: string;
+  displayName?: string | null;
+  avatarUrl?: string | null;
+  discordUsername?: string | null;
+};
+
+export type LocalSession = { access_token: string; user: LocalSessionUser };
 type AuthEvent = "SIGNED_IN" | "SIGNED_OUT" | "TOKEN_REFRESHED";
 type Listener = (event: AuthEvent, session: LocalSession | null) => void;
 
@@ -25,7 +33,7 @@ function read(): LocalSession | null {
   }
 }
 
-function save(result: { token: string; user: { id: string; email: string } }, event: AuthEvent) {
+function save(result: { token: string; user: LocalSessionUser }, event: AuthEvent) {
   const session = { access_token: result.token, user: result.user };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
   listeners.forEach((listener) => listener(event, session));
@@ -38,7 +46,7 @@ function decodeDiscordSession(payload: string) {
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
   return JSON.parse(new TextDecoder().decode(bytes)) as {
     token: string;
-    user: { id: string; email: string };
+    user: LocalSessionUser;
   };
 }
 
