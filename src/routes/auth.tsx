@@ -36,11 +36,12 @@ function AuthPage() {
 
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const discordSession = hashParams.get("discord_session");
-    const discordError = hashParams.get("discord_error");
+    const searchParams = new URLSearchParams(window.location.search);
+    const discordSession = hashParams.get("discord_session") || searchParams.get("discord_session");
+    const discordError = hashParams.get("discord_error") || searchParams.get("discord_error");
 
     if (discordSession || discordError) {
-      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      window.history.replaceState(null, "", window.location.pathname);
     }
     if (discordError) toast.error(discordError);
     if (!discordSession) return;

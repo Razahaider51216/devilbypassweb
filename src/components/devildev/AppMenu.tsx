@@ -121,6 +121,8 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const purchaseContacts = storefront.data?.purchaseContacts ?? [];
   const plans = storefront.data?.plans ?? [];
   const me = account.data;
+  const hasSession = Boolean(session);
+  const accountFallbackName = session?.user.email?.split("@")[0] || "Discord user";
   const primaryPurchaseContact =
     purchaseContacts.find((item) => item.kind === "discord" && item.url) ?? null;
   const username = me?.username ?? "";
@@ -193,7 +195,7 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
               {/* ── Account ─────────────────────────────── */}
               <Section icon={<UserIcon className="h-3.5 w-3.5" />} title={x.menuAccount}>
                 <div className="rounded-2xl border border-border bg-card p-4">
-                  {session && me ? (
+                  {me ? (
                     <>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border border-border">
@@ -261,6 +263,46 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
                         <LogOut className="h-3.5 w-3.5" />
                         {copy.nav.logout}
                       </button>
+                    </>
+                  ) : hasSession ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-border">
+                          <AvatarFallback className="bg-foreground text-background">
+                            <UserIcon className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{accountFallbackName}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {account.isError
+                              ? lang === "th"
+                                ? "โหลดโปรไฟล์ไม่สำเร็จ"
+                                : "Profile could not be loaded"
+                              : lang === "th"
+                                ? "กำลังโหลดโปรไฟล์..."
+                                : "Loading profile..."}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          onClick={() => queryClient.invalidateQueries({ queryKey: ["account"] })}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-semibold transition-colors hover:bg-accent"
+                        >
+                          {account.isFetching ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : null}
+                          {lang === "th" ? "ลองใหม่" : "Retry"}
+                        </button>
+                        <button
+                          onClick={signOut}
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-semibold transition-colors hover:bg-accent"
+                        >
+                          <LogOut className="h-3.5 w-3.5" />
+                          {copy.nav.logout}
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
