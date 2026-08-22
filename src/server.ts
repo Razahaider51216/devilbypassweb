@@ -18,6 +18,16 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
+function applyRuntimeEnv(env: unknown) {
+  if (!env || typeof env !== "object") return;
+
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === "string" && !process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
@@ -90,6 +100,8 @@ function hardenResponse(request: Request, response: Response): Response {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      applyRuntimeEnv(env);
+
       const requestUrl = new URL(request.url);
       if (
         request.method === "GET" &&
