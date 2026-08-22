@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Pool, type PoolClient } from "pg";
+import { Pool, type PoolClient } from "@neondatabase/serverless";
 import { serverEnv } from "./runtime-env.server";
 
 type Row = Record<string, unknown>;
@@ -33,7 +33,6 @@ const tableMeta = {
 type TableName = keyof typeof tableMeta;
 type Filter = { sql: string; values: unknown[] };
 
-let pool: Pool | undefined;
 let initialization: Promise<void> | undefined;
 
 function now() {
@@ -53,16 +52,13 @@ function databaseUrl() {
   return parsed.toString();
 }
 
-function getPool() {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: databaseUrl(),
-      max: 5,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 15_000,
-    });
-    pool.on("error", (error) => console.error("Neon PostgreSQL pool error", error));
-  }
+function createPool() {
+  const pool = new Pool({
+    connectionString: databaseUrl(),
+    max: 1,
+    connectionTimeoutMillis: 15_000,
+  });
+  pool.on("error", (error: Error) => console.error("Neon PostgreSQL pool error", error));
   return pool;
 }
 
@@ -71,7 +67,8 @@ export function isPostgresConfigured() {
 }
 
 async function initialize() {
-  const client = await getPool().connect();
+  const pool = createPool();
+  const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query(`
@@ -376,6 +373,7 @@ async function initialize() {
     throw error;
   } finally {
     client.release();
+    await pool.end();
   }
 }
 
@@ -561,12 +559,14 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
     });
   }
   private async execute(): Promise<Result> {
+    let pool: Pool | undefined;
     try {
       await ensurePostgres();
+      pool = createPool();
       if (this.operation === "select") {
         const where = this.compileWhere();
         if (this.wantsCount) {
-          const result = await getPool().query(
+          const result = await pool.query(
             `SELECT COUNT(*) AS total FROM ${this.table}${where.sql}`,
             where.values,
           );
@@ -578,7 +578,7 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
         }
         const order = this.orders.length ? ` ORDER BY ${this.orders.join(", ")}` : "";
         const limit = this.maxRows !== null ? ` LIMIT ${this.maxRows}` : "";
-        const result = await getPool().query(
+        const result = await pool.query(
           `SELECT ${this.selected} FROM ${this.table}${where.sql}${order}${limit}`,
           where.values,
         );
@@ -586,7 +586,7 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
         return { data: this.one ? (rows[0] ?? null) : rows, error: null };
       }
       if (this.operation === "insert") {
-        const client = await getPool().connect();
+        const client = await pool.connect();
         const returned: Row[] = [];
         try {
           await client.query("BEGIN");
@@ -627,7 +627,7 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
           ...where.values,
         ];
         const returning = this.returning ? ` RETURNING ${this.returning}` : "";
-        const result = await getPool().query(
+        const result = await pool.query(
           `UPDATE ${this.table} SET ${columns.map((column, index) => `${column}=$${index + 1}`).join(",")}${where.sql}${returning}`,
           values,
         );
@@ -635,7 +635,7 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
         return { data: this.one ? (rows[0] ?? null) : this.returning ? rows : null, error: null };
       }
       const where = this.compileWhere();
-      await getPool().query(`DELETE FROM ${this.table}${where.sql}`, where.values);
+      await pool.query(`DELETE FROM ${this.table}${where.sql}`, where.values);
       return { data: null, error: null };
     } catch (error) {
       return {
@@ -643,6 +643,8 @@ class PostgresQueryBuilder implements PromiseLike<Result> {
         error: { message: error instanceof Error ? error.message : String(error) },
         count: null,
       };
+    } finally {
+      await pool?.end();
     }
   }
   then<TResult1 = Result, TResult2 = never>(
@@ -784,16 +786,18 @@ async function finishBypass(client: PoolClient, args: Row): Promise<Result> {
 }
 
 async function rpc(name: string, args: Row): Promise<Result> {
+  let pool: Pool | undefined;
   try {
     await ensurePostgres();
+    pool = createPool();
     if (name === "has_role") {
-      const result = await getPool().query(
-        "SELECT 1 FROM user_roles WHERE user_id=$1 AND role=$2",
-        [args["_user_id"], args["_role"]],
-      );
+      const result = await pool.query("SELECT 1 FROM user_roles WHERE user_id=$1 AND role=$2", [
+        args["_user_id"],
+        args["_role"],
+      ]);
       return { data: Boolean(result.rowCount), error: null };
     }
-    const client = await getPool().connect();
+    const client = await pool.connect();
     try {
       if (name === "reserve_bypass_slot")
         return await reserveBypass(
@@ -811,20 +815,32 @@ async function rpc(name: string, args: Row): Promise<Result> {
       data: null,
       error: { message: error instanceof Error ? error.message : String(error) },
     };
+  } finally {
+    await pool?.end();
   }
 }
 
 export async function postgresSessionUser(id: string, email: string) {
   await ensurePostgres();
-  return (
-    ((await getPool().query("SELECT 1 FROM users WHERE id=$1 AND email=$2", [id, email]))
-      .rowCount ?? 0) > 0
-  );
+  const pool = createPool();
+  try {
+    return (
+      ((await pool.query("SELECT 1 FROM users WHERE id=$1 AND email=$2", [id, email])).rowCount ??
+        0) > 0
+    );
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function postgresDeleteUser(userId: string) {
   await ensurePostgres();
-  await getPool().query("DELETE FROM users WHERE id=$1", [userId]);
+  const pool = createPool();
+  try {
+    await pool.query("DELETE FROM users WHERE id=$1", [userId]);
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function postgresSignInDiscordUser(input: {
@@ -838,7 +854,8 @@ export async function postgresSignInDiscordUser(input: {
   isOwner: boolean;
 }) {
   await ensurePostgres();
-  const client = await getPool().connect();
+  const pool = createPool();
+  const client = await pool.connect();
   try {
     await client.query("BEGIN");
     let user = (
@@ -916,6 +933,7 @@ export async function postgresSignInDiscordUser(input: {
     throw error;
   } finally {
     client.release();
+    await pool.end();
   }
 }
 
