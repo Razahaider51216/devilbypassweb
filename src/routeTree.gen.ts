@@ -14,10 +14,12 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as Payment_successRouteImport } from './routes/payment_success'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as AuthDiscordCallbackRouteImport } from './routes/auth.discord.callback'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -44,6 +46,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Payment_successRoute = Payment_successRouteImport.update({
   id: '/payment_success',
   path: '/payment_success',
@@ -64,40 +71,51 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
+  id: '/discord/callback',
+  path: '/discord/callback',
+  getParentRoute: () => AuthRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/changelog': typeof ChangelogRoute
   '/checkout': typeof CheckoutRoute
+  '/login': typeof LoginRoute
   '/payment_success': typeof Payment_successRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/changelog': typeof ChangelogRoute
   '/checkout': typeof CheckoutRoute
+  '/login': typeof LoginRoute
   '/payment_success': typeof Payment_successRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/changelog': typeof ChangelogRoute
   '/checkout': typeof CheckoutRoute
+  '/login': typeof LoginRoute
   '/payment_success': typeof Payment_successRoute
   '/privacy': typeof PrivacyRoute
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
+  '/auth/discord/callback': typeof AuthDiscordCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,10 +125,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/changelog'
     | '/checkout'
+    | '/login'
     | '/payment_success'
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/auth/discord/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -118,10 +138,12 @@ export interface FileRouteTypes {
     | '/auth'
     | '/changelog'
     | '/checkout'
+    | '/login'
     | '/payment_success'
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/auth/discord/callback'
   id:
     | '__root__'
     | '/'
@@ -129,18 +151,21 @@ export interface FileRouteTypes {
     | '/auth'
     | '/changelog'
     | '/checkout'
+    | '/login'
     | '/payment_success'
     | '/privacy'
     | '/support'
     | '/terms'
+    | '/auth/discord/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   ChangelogRoute: typeof ChangelogRoute
   CheckoutRoute: typeof CheckoutRoute
+  LoginRoute: typeof LoginRoute
   Payment_successRoute: typeof Payment_successRoute
   PrivacyRoute: typeof PrivacyRoute
   SupportRoute: typeof SupportRoute
@@ -184,6 +209,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/payment_success': {
       id: '/payment_success'
       path: '/payment_success'
@@ -212,15 +244,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/discord/callback': {
+      id: '/auth/discord/callback'
+      path: '/discord/callback'
+      fullPath: '/auth/discord/callback'
+      preLoaderRoute: typeof AuthDiscordCallbackRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
+
+interface AuthRouteChildren {
+  AuthDiscordCallbackRoute: typeof AuthDiscordCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthDiscordCallbackRoute: AuthDiscordCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   ChangelogRoute: ChangelogRoute,
   CheckoutRoute: CheckoutRoute,
+  LoginRoute: LoginRoute,
   Payment_successRoute: Payment_successRoute,
   PrivacyRoute: PrivacyRoute,
   SupportRoute: SupportRoute,

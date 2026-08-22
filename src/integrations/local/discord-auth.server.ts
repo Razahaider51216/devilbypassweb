@@ -11,6 +11,7 @@ const PUBLIC_ORIGIN_ENV_KEYS = [
   "SITE_URL",
   "RENDER_EXTERNAL_URL",
 ] as const;
+const DISCORD_CALLBACK_PATH = "/auth/discord/callback";
 
 type DiscordUser = {
   id: string;
@@ -83,10 +84,10 @@ function discordConfig(request: Request) {
   const clientId = process.env["DISCORD_CLIENT_ID"]?.trim();
   const clientSecret = process.env["DISCORD_CLIENT_SECRET"]?.trim();
   const origin = requestOrigin(request);
-  const callback = new URL("/api/auth/discord/callback", origin).toString();
+  const callback = new URL(DISCORD_CALLBACK_PATH, origin).toString();
   const configuredRedirect = process.env["DISCORD_REDIRECT_URI"]?.trim();
   // Render may be configured with either the complete callback URL or only
-  // /api/auth/discord/callback. Discord always requires an absolute URL.
+  // /auth/discord/callback. Discord always requires an absolute URL.
   let redirectUri = configuredRedirect ? new URL(configuredRedirect, origin).toString() : callback;
   if (
     process.env["NODE_ENV"] === "production" &&
@@ -114,7 +115,7 @@ function cookieValue(request: Request, name: string) {
 
 function stateCookie(request: Request, state: string, maxAge = 600) {
   const secure = new URL(requestOrigin(request)).protocol === "https:" ? "; Secure" : "";
-  return `${STATE_COOKIE}=${encodeURIComponent(state)}; Path=/api/auth/discord; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
+  return `${STATE_COOKIE}=${encodeURIComponent(state)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 function authRedirect(request: Request, key: "discord_session" | "discord_error", value: string) {

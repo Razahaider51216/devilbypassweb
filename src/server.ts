@@ -98,7 +98,11 @@ export default {
         const { beginDiscordAuth } = await import("./integrations/local/discord-auth.server");
         return hardenResponse(request, beginDiscordAuth(request));
       }
-      if (request.method === "GET" && requestUrl.pathname === "/api/auth/discord/callback") {
+      if (
+        request.method === "GET" &&
+        (requestUrl.pathname === "/auth/discord/callback" ||
+          requestUrl.pathname === "/api/auth/discord/callback")
+      ) {
         const { finishDiscordAuth } = await import("./integrations/local/discord-auth.server");
         return hardenResponse(request, await finishDiscordAuth(request));
       }

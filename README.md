@@ -3,10 +3,10 @@
 ## Discord login
 
 1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
-2. In OAuth2, add `http://localhost:3000/api/auth/discord/callback` as a Redirect URI.
+2. In OAuth2, add `http://localhost:3000/auth/discord/callback` as a Redirect URI.
 3. Copy the Client ID and Client Secret into `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` in `.env`.
 4. Set `DISCORD_REDIRECT_URI` to that same URI. In production, use the public HTTPS domain in both Discord and `.env`.
-   You can also set `PUBLIC_SITE_URL=https://your-domain.example` and `DISCORD_REDIRECT_URI=/api/auth/discord/callback`.
+   You can also set `PUBLIC_SITE_URL=https://your-domain.example` and `DISCORD_REDIRECT_URI=/auth/discord/callback`.
    The final callback URL must exactly match one Redirect URI in Discord Developer Portal.
 
 The app requests only the `identify` and `email` scopes. Discord access tokens are used once to fetch the profile and are not stored. The Discord ID, display name, username, and avatar URL are stored in the local SQLite database.
