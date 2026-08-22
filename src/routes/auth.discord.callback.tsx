@@ -5,6 +5,14 @@ export const Route = createFileRoute("/auth/discord/callback")({
   head: () => ({
     meta: [{ title: "Completing Discord sign in — DevilDev Bypass" }],
   }),
+  server: {
+    handlers: {
+      GET: async ({ request }) => {
+        const { finishDiscordAuth } = await import("@/integrations/local/discord-auth.server");
+        return finishDiscordAuth(request);
+      },
+    },
+  },
   component: DiscordCallbackFallback,
 });
 
