@@ -7,6 +7,10 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
+declare global {
+  var __DEVILBYPASS_RUNTIME_ENV: Record<string, string> | undefined;
+}
+
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
@@ -21,11 +25,20 @@ async function getServerEntry(): Promise<ServerEntry> {
 function applyRuntimeEnv(env: unknown) {
   if (!env || typeof env !== "object") return;
 
+  const runtimeEnv = globalThis.__DEVILBYPASS_RUNTIME_ENV ?? {};
   for (const [key, value] of Object.entries(env)) {
-    if (typeof value === "string" && !process.env[key]) {
-      process.env[key] = value;
+    if (typeof value === "string") {
+      runtimeEnv[key] = value;
+      try {
+        if (!process.env[key]) {
+          process.env[key] = value;
+        }
+      } catch {
+        // Some edge runtimes expose process.env as read-only; global runtime env is still available.
+      }
     }
   }
+  globalThis.__DEVILBYPASS_RUNTIME_ENV = runtimeEnv;
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body

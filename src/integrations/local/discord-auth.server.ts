@@ -13,6 +13,10 @@ const PUBLIC_ORIGIN_ENV_KEYS = [
 ] as const;
 const DISCORD_CALLBACK_PATH = "/auth/discord/callback";
 
+declare global {
+  var __DEVILBYPASS_RUNTIME_ENV: Record<string, string> | undefined;
+}
+
 type DiscordUser = {
   id: string;
   username: string;
@@ -37,7 +41,7 @@ function forwardedHeaderParam(request: Request, name: string) {
 
 function configuredPublicOrigin() {
   for (const key of PUBLIC_ORIGIN_ENV_KEYS) {
-    const value = process.env[key]?.trim();
+    const value = envValue(key);
     if (!value) continue;
     try {
       const url = new URL(value);
@@ -47,6 +51,10 @@ function configuredPublicOrigin() {
     }
   }
   return null;
+}
+
+function envValue(key: string) {
+  return process.env[key]?.trim() || globalThis.__DEVILBYPASS_RUNTIME_ENV?.[key]?.trim() || "";
 }
 
 function requestOrigin(request: Request) {
@@ -81,16 +89,16 @@ function isLoopbackOrigin(origin: string) {
 }
 
 function discordConfig(request: Request) {
-  const clientId = process.env["DISCORD_CLIENT_ID"]?.trim();
-  const clientSecret = process.env["DISCORD_CLIENT_SECRET"]?.trim();
+  const clientId = envValue("DISCORD_CLIENT_ID");
+  const clientSecret = envValue("DISCORD_CLIENT_SECRET");
   const origin = requestOrigin(request);
   const callback = new URL(DISCORD_CALLBACK_PATH, origin).toString();
-  const configuredRedirect = process.env["DISCORD_REDIRECT_URI"]?.trim();
+  const configuredRedirect = envValue("DISCORD_REDIRECT_URI");
   // Render may be configured with either the complete callback URL or only
   // /auth/discord/callback. Discord always requires an absolute URL.
   let redirectUri = configuredRedirect ? new URL(configuredRedirect, origin).toString() : callback;
   if (
-    process.env["NODE_ENV"] === "production" &&
+    envValue("NODE_ENV") === "production" &&
     isLoopbackOrigin(new URL(redirectUri).origin) &&
     !isLoopbackOrigin(origin)
   ) {
@@ -100,7 +108,11 @@ function discordConfig(request: Request) {
     redirectUri = callback;
   }
   if (!clientId || !clientSecret) {
-    throw new Error("Discord login is not configured");
+    const missing = [
+      !clientId ? "DISCORD_CLIENT_ID" : null,
+      !clientSecret ? "DISCORD_CLIENT_SECRET" : null,
+    ].filter(Boolean);
+    throw new Error(`Discord login is not configured: missing ${missing.join(", ")}`);
   }
   return { clientId, clientSecret, redirectUri };
 }
@@ -177,11 +189,7 @@ function internalUsername(discordUsername: string, discordId: string) {
 function signInDiscordUserSqlite(discord: DiscordUser) {
   const db = getSqlite();
   const discordEmail = discord.email?.trim().toLowerCase() || null;
-  const ownerDiscordId = (
-    process.env["OWNER_DISCORD_ID"] ||
-    process.env["ADMIN_DISCORD_ID"] ||
-    ""
-  ).trim();
+  const ownerDiscordId = (envValue("OWNER_DISCORD_ID") || envValue("ADMIN_DISCORD_ID")).trim();
   const isOwner = ownerDiscordId.length > 0 && discord.id === ownerDiscordId;
   let user = db.prepare("SELECT id,email FROM users WHERE discord_id=?").get(discord.id) as
     LocalUser | undefined;
@@ -257,14 +265,10 @@ function signInDiscordUserSqlite(discord: DiscordUser) {
 }
 
 async function signInDiscordUser(discord: DiscordUser) {
-  if (!process.env["DATABASE_URL"]?.trim()) return signInDiscordUserSqlite(discord);
+  if (!envValue("DATABASE_URL")) return signInDiscordUserSqlite(discord);
 
   const discordEmail = discord.email?.trim().toLowerCase() || null;
-  const ownerDiscordId = (
-    process.env["OWNER_DISCORD_ID"] ||
-    process.env["ADMIN_DISCORD_ID"] ||
-    ""
-  ).trim();
+  const ownerDiscordId = (envValue("OWNER_DISCORD_ID") || envValue("ADMIN_DISCORD_ID")).trim();
   const { postgresSignInDiscordUser } = await import("./postgres-database.server");
   const user = await postgresSignInDiscordUser({
     discordId: discord.id,
