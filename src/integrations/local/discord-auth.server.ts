@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { getSqlite } from "./database.server";
 import { hashPassword, sessionForUser } from "./auth.server";
+import { serverEnv } from "./runtime-env.server";
 
 const STATE_COOKIE = "devildev.discord_state";
 const DISCORD_API = "https://discord.com/api/v10";
@@ -12,10 +13,6 @@ const PUBLIC_ORIGIN_ENV_KEYS = [
   "RENDER_EXTERNAL_URL",
 ] as const;
 const DISCORD_CALLBACK_PATH = "/auth/discord/callback";
-
-declare global {
-  var __DEVILBYPASS_RUNTIME_ENV: Record<string, string> | undefined;
-}
 
 type DiscordUser = {
   id: string;
@@ -41,7 +38,7 @@ function forwardedHeaderParam(request: Request, name: string) {
 
 function configuredPublicOrigin() {
   for (const key of PUBLIC_ORIGIN_ENV_KEYS) {
-    const value = envValue(key);
+    const value = serverEnv(key);
     if (!value) continue;
     try {
       const url = new URL(value);
@@ -51,10 +48,6 @@ function configuredPublicOrigin() {
     }
   }
   return null;
-}
-
-function envValue(key: string) {
-  return process.env[key]?.trim() || globalThis.__DEVILBYPASS_RUNTIME_ENV?.[key]?.trim() || "";
 }
 
 function requestOrigin(request: Request) {
@@ -89,16 +82,16 @@ function isLoopbackOrigin(origin: string) {
 }
 
 function discordConfig(request: Request) {
-  const clientId = envValue("DISCORD_CLIENT_ID");
-  const clientSecret = envValue("DISCORD_CLIENT_SECRET");
+  const clientId = serverEnv("DISCORD_CLIENT_ID");
+  const clientSecret = serverEnv("DISCORD_CLIENT_SECRET");
   const origin = requestOrigin(request);
   const callback = new URL(DISCORD_CALLBACK_PATH, origin).toString();
-  const configuredRedirect = envValue("DISCORD_REDIRECT_URI");
+  const configuredRedirect = serverEnv("DISCORD_REDIRECT_URI");
   // Render may be configured with either the complete callback URL or only
   // /auth/discord/callback. Discord always requires an absolute URL.
   let redirectUri = configuredRedirect ? new URL(configuredRedirect, origin).toString() : callback;
   if (
-    envValue("NODE_ENV") === "production" &&
+    serverEnv("NODE_ENV") === "production" &&
     isLoopbackOrigin(new URL(redirectUri).origin) &&
     !isLoopbackOrigin(origin)
   ) {
@@ -189,7 +182,7 @@ function internalUsername(discordUsername: string, discordId: string) {
 function signInDiscordUserSqlite(discord: DiscordUser) {
   const db = getSqlite();
   const discordEmail = discord.email?.trim().toLowerCase() || null;
-  const ownerDiscordId = (envValue("OWNER_DISCORD_ID") || envValue("ADMIN_DISCORD_ID")).trim();
+  const ownerDiscordId = (serverEnv("OWNER_DISCORD_ID") || serverEnv("ADMIN_DISCORD_ID")).trim();
   const isOwner = ownerDiscordId.length > 0 && discord.id === ownerDiscordId;
   let user = db.prepare("SELECT id,email FROM users WHERE discord_id=?").get(discord.id) as
     LocalUser | undefined;
@@ -265,10 +258,10 @@ function signInDiscordUserSqlite(discord: DiscordUser) {
 }
 
 async function signInDiscordUser(discord: DiscordUser) {
-  if (!envValue("DATABASE_URL")) return signInDiscordUserSqlite(discord);
+  if (!serverEnv("DATABASE_URL")) return signInDiscordUserSqlite(discord);
 
   const discordEmail = discord.email?.trim().toLowerCase() || null;
-  const ownerDiscordId = (envValue("OWNER_DISCORD_ID") || envValue("ADMIN_DISCORD_ID")).trim();
+  const ownerDiscordId = (serverEnv("OWNER_DISCORD_ID") || serverEnv("ADMIN_DISCORD_ID")).trim();
   const { postgresSignInDiscordUser } = await import("./postgres-database.server");
   const user = await postgresSignInDiscordUser({
     discordId: discord.id,

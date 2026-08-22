@@ -193,7 +193,7 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
         </SheetTrigger>
         <SheetContent side="right" className="flex w-[330px] flex-col gap-0 p-0 sm:w-[390px]">
           <SheetHeader className="shrink-0 border-b border-border px-5 py-4 text-left">
-            <SheetTitle>DevilDev</SheetTitle>
+            <SheetTitle>DevilBypass</SheetTitle>
           </SheetHeader>
 
           <ScrollArea className="flex-1">

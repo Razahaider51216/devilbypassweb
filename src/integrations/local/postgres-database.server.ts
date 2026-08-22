@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
+import { serverEnv } from "./runtime-env.server";
 
 type Row = Record<string, unknown>;
 // The compatibility query builder intentionally returns runtime-shaped rows.
@@ -40,7 +41,7 @@ function now() {
 }
 
 function databaseUrl() {
-  const value = process.env["DATABASE_URL"]?.trim();
+  const value = serverEnv("DATABASE_URL");
   if (!value) throw new Error("DATABASE_URL is not configured");
   if (!/^postgres(?:ql)?:\/\//i.test(value)) throw new Error("DATABASE_URL must be PostgreSQL");
 
@@ -66,7 +67,7 @@ function getPool() {
 }
 
 export function isPostgresConfigured() {
-  return Boolean(process.env["DATABASE_URL"]?.trim());
+  return Boolean(serverEnv("DATABASE_URL"));
 }
 
 async function initialize() {

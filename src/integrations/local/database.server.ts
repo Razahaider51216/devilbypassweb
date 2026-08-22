@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync, type SQLInputValue } from "node:sqlite";
 import { isPostgresConfigured, postgresDatabase } from "./postgres-database.server";
+import { serverEnv } from "./runtime-env.server";
 
 type Row = Record<string, unknown>;
 // The compatibility query builder intentionally returns rows with runtime-defined shapes.
@@ -41,7 +42,7 @@ function now() {
 }
 
 function dataDirectory() {
-  return resolve(process.env["DATA_DIR"] || "./data");
+  return resolve(serverEnv("DATA_DIR") || "./data");
 }
 
 export function getDataDirectory() {

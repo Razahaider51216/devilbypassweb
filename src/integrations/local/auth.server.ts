@@ -1,12 +1,13 @@
 import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { getSqlite } from "./database.server";
+import { serverEnv } from "./runtime-env.server";
 
 export type SessionClaims = { sub: string; email: string; exp: number; iat: number };
 
 function sessionSecret() {
-  const configured = process.env["SESSION_SECRET"];
+  const configured = serverEnv("SESSION_SECRET");
   if (configured && configured.length >= 32) return configured;
-  if (process.env["NODE_ENV"] === "production") {
+  if (serverEnv("NODE_ENV") === "production") {
     throw new Error("SESSION_SECRET must contain at least 32 characters");
   }
   return "devildev-local-development-secret-change-me";
@@ -40,7 +41,7 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
   try {
     const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as SessionClaims;
     if (!claims.sub || !claims.email || claims.exp <= Math.floor(Date.now() / 1000)) return null;
-    const exists = process.env["DATABASE_URL"]?.trim()
+    const exists = serverEnv("DATABASE_URL")
       ? await import("./postgres-database.server").then(({ postgresSessionUser }) =>
           postgresSessionUser(claims.sub, claims.email),
         )
@@ -56,7 +57,7 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
 }
 
 export async function deleteUser(userId: string) {
-  if (process.env["DATABASE_URL"]?.trim()) {
+  if (serverEnv("DATABASE_URL")) {
     const { postgresDeleteUser } = await import("./postgres-database.server");
     await postgresDeleteUser(userId);
     return;
