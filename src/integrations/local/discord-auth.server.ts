@@ -4,6 +4,13 @@ import { hashPassword, sessionForUser } from "./auth.server";
 
 const STATE_COOKIE = "devildev.discord_state";
 const DISCORD_API = "https://discord.com/api/v10";
+const PUBLIC_ORIGIN_ENV_KEYS = [
+  "DISCORD_PUBLIC_ORIGIN",
+  "PUBLIC_SITE_URL",
+  "APP_URL",
+  "SITE_URL",
+  "RENDER_EXTERNAL_URL",
+] as const;
 
 type DiscordUser = {
   id: string;
@@ -17,15 +24,62 @@ type DiscordUser = {
 
 type LocalUser = { id: string; email: string };
 
+function firstHeader(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
+}
+
+function forwardedHeaderParam(request: Request, name: string) {
+  const forwarded = firstHeader(request.headers.get("forwarded"));
+  const match = forwarded?.match(new RegExp(`(?:^|;\\s*)${name}=(?:"([^"]+)"|([^;]+))`, "i"));
+  return match?.[1] || match?.[2] || null;
+}
+
+function configuredPublicOrigin() {
+  for (const key of PUBLIC_ORIGIN_ENV_KEYS) {
+    const value = process.env[key]?.trim();
+    if (!value) continue;
+    try {
+      const url = new URL(value);
+      return url.origin;
+    } catch {
+      console.warn(`${key} must be an absolute URL; ignoring invalid value.`);
+    }
+  }
+  return null;
+}
+
+function requestOrigin(request: Request) {
+  const configured = configuredPublicOrigin();
+  if (configured) return configured;
+
+  const url = new URL(request.url);
+  const forwardedProto =
+    firstHeader(request.headers.get("x-forwarded-proto")) ||
+    firstHeader(request.headers.get("x-forwarded-protocol")) ||
+    forwardedHeaderParam(request, "proto") ||
+    (firstHeader(request.headers.get("x-forwarded-ssl")) === "on" ? "https" : null);
+  const forwardedHost =
+    firstHeader(request.headers.get("x-forwarded-host")) ||
+    forwardedHeaderParam(request, "host") ||
+    firstHeader(request.headers.get("host"));
+  const protocol =
+    forwardedProto === "https" || forwardedProto === "http"
+      ? forwardedProto
+      : url.protocol.slice(0, -1);
+  const host = forwardedHost || url.host;
+  return `${protocol}://${host}`;
+}
+
 function discordConfig(request: Request) {
   const clientId = process.env["DISCORD_CLIENT_ID"]?.trim();
   const clientSecret = process.env["DISCORD_CLIENT_SECRET"]?.trim();
-  const callback = new URL("/api/auth/discord/callback", request.url).toString();
+  const origin = requestOrigin(request);
+  const callback = new URL("/api/auth/discord/callback", origin).toString();
   const configuredRedirect = process.env["DISCORD_REDIRECT_URI"]?.trim();
   // Render may be configured with either the complete callback URL or only
   // /api/auth/discord/callback. Discord always requires an absolute URL.
   const redirectUri = configuredRedirect
-    ? new URL(configuredRedirect, request.url).toString()
+    ? new URL(configuredRedirect, origin).toString()
     : callback;
   if (!clientId || !clientSecret) {
     throw new Error("Discord login is not configured");
@@ -42,12 +96,12 @@ function cookieValue(request: Request, name: string) {
 }
 
 function stateCookie(request: Request, state: string, maxAge = 600) {
-  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
+  const secure = new URL(requestOrigin(request)).protocol === "https:" ? "; Secure" : "";
   return `${STATE_COOKIE}=${encodeURIComponent(state)}; Path=/api/auth/discord; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
 function authRedirect(request: Request, key: "discord_session" | "discord_error", value: string) {
-  const destination = new URL("/auth", request.url);
+  const destination = new URL("/auth", requestOrigin(request));
   destination.hash = `${key}=${encodeURIComponent(value)}`;
   return new Response(null, {
     status: 302,
@@ -57,6 +111,19 @@ function authRedirect(request: Request, key: "discord_session" | "discord_error"
       "cache-control": "no-store",
     },
   });
+}
+
+async function discordErrorMessage(response: Response) {
+  let body = "";
+  try {
+    body = await response.text();
+  } catch {
+    // The status is still enough to guide the operator when the body is unreadable.
+  }
+  console.error(
+    `Discord token exchange failed with ${response.status} ${response.statusText}${body ? `: ${body}` : ""}`,
+  );
+  return "Discord rejected the login request. Please verify the Discord Redirect URI and client secret.";
 }
 
 function avatarUrl(user: DiscordUser) {
@@ -234,7 +301,7 @@ export async function finishDiscordAuth(request: Request) {
         redirect_uri: redirectUri,
       }),
     });
-    if (!tokenResponse.ok) throw new Error("Discord rejected the login request");
+    if (!tokenResponse.ok) throw new Error(await discordErrorMessage(tokenResponse));
     const token = (await tokenResponse.json()) as { access_token?: string; token_type?: string };
     if (!token.access_token) throw new Error("Discord did not return an access token");
 

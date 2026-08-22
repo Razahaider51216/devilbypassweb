@@ -70,9 +70,39 @@ function staticResponse(pathname) {
   });
 }
 
+function firstHeader(value) {
+  if (Array.isArray(value)) return firstHeader(value[0]);
+  if (!value) return undefined;
+  return String(value).split(",")[0]?.trim() || undefined;
+}
+
+function forwardedProto(request) {
+  const forwarded = firstHeader(request.headers.forwarded);
+  const forwardedMatch = forwarded?.match(/(?:^|;\s*)proto=(?:"([^"]+)"|([^;]+))/i);
+  const proto =
+    firstHeader(request.headers["x-forwarded-proto"]) ||
+    firstHeader(request.headers["x-forwarded-protocol"]) ||
+    forwardedMatch?.[1] ||
+    forwardedMatch?.[2] ||
+    (firstHeader(request.headers["x-forwarded-ssl"]) === "on" ? "https" : undefined);
+  return proto === "https" || proto === "http" ? proto : "http";
+}
+
+function forwardedHost(request) {
+  const forwarded = firstHeader(request.headers.forwarded);
+  const forwardedMatch = forwarded?.match(/(?:^|;\s*)host=(?:"([^"]+)"|([^;]+))/i);
+  return (
+    firstHeader(request.headers["x-forwarded-host"]) ||
+    forwardedMatch?.[1] ||
+    forwardedMatch?.[2] ||
+    firstHeader(request.headers.host) ||
+    "localhost"
+  );
+}
+
 function toRequest(request) {
-  const host = request.headers.host || "localhost";
-  const protocol = request.headers["x-forwarded-proto"] || "http";
+  const host = forwardedHost(request);
+  const protocol = forwardedProto(request);
   const headers = new Headers();
   for (const [key, value] of Object.entries(request.headers)) {
     if (Array.isArray(value)) value.forEach((item) => headers.append(key, item));
