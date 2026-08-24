@@ -103,8 +103,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.svg?v=devilbypass", type: "image/svg+xml" },
-      { rel: "alternate icon", href: "/favicon.ico", type: "image/x-icon" },
+      {
+        rel: "icon",
+        href: "/favicon.png?v=devilbypass-logo-20260825",
+        type: "image/png",
+        sizes: "1024x1024",
+      },
+      {
+        rel: "shortcut icon",
+        href: "/favicon.ico?v=devilbypass-logo-20260825",
+        type: "image/x-icon",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/apple-touch-icon.png?v=devilbypass-logo-20260825",
+        sizes: "180x180",
+      },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
