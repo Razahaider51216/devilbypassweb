@@ -34,6 +34,7 @@ type TableName = keyof typeof tableMeta;
 type Filter = { sql: string; values: unknown[] };
 
 let initialization: Promise<void> | undefined;
+let workerSchemaMigration: Promise<void> | undefined;
 
 // Pool.query can use Neon's HTTP transport when no pool lifecycle listeners
 // are registered. This is required by stateless Cloudflare Worker requests.
@@ -397,11 +398,27 @@ async function initialize() {
 }
 
 async function ensurePostgres() {
-  // The schema already exists in deployed databases. Running the legacy seed
-  // transaction per Worker isolate would require a WebSocket connection, which
-  // is not safe across stateless fetch lifetimes. Migrations used by auth are
-  // created separately through the HTTP driver.
-  if (isCloudflareWorker()) return;
+  // Running the legacy seed transaction per Worker isolate would require a
+  // WebSocket connection, which is not safe across stateless fetch lifetimes.
+  // Keep additive production migrations on Neon's HTTP driver instead.
+  if (isCloudflareWorker()) {
+    if (!workerSchemaMigration) {
+      workerSchemaMigration = (async () => {
+        const sql = neon(databaseUrl());
+        await sql.query(
+          "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS image_urls TEXT NOT NULL DEFAULT '[]'",
+        );
+        await sql.query(
+          "UPDATE announcements SET image_urls=json_build_array(image_url)::text WHERE image_urls='[]' AND image_url<>''",
+        );
+      })().catch((error) => {
+        workerSchemaMigration = undefined;
+        throw error;
+      });
+    }
+    await workerSchemaMigration;
+    return;
+  }
   if (!initialization) {
     initialization = initialize().catch((error) => {
       initialization = undefined;
