@@ -20,6 +20,8 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ApiAuthDiscordRouteImport } from './routes/api.auth.discord'
+import { Route as ApiAuthLogoutRouteImport } from './routes/api.auth.logout'
+import { Route as ApiAuthSessionRouteImport } from './routes/api.auth.session'
 import { Route as AuthDiscordCallbackRouteImport } from './routes/auth.discord.callback'
 import { Route as ApiAuthDiscordCallbackRouteImport } from './routes/api.auth.discord.callback'
 
@@ -78,6 +80,16 @@ const ApiAuthDiscordRoute = ApiAuthDiscordRouteImport.update({
   path: '/api/auth/discord',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthLogoutRoute = ApiAuthLogoutRouteImport.update({
+  id: '/api/auth/logout',
+  path: '/api/auth/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSessionRoute = ApiAuthSessionRouteImport.update({
+  id: '/api/auth/session',
+  path: '/api/auth/session',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthDiscordCallbackRoute = AuthDiscordCallbackRouteImport.update({
   id: '/discord/callback',
   path: '/discord/callback',
@@ -101,6 +113,8 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/api/auth/discord': typeof ApiAuthDiscordRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/api/auth/discord/callback': typeof ApiAuthDiscordCallbackRoute
 }
@@ -116,6 +130,8 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/api/auth/discord': typeof ApiAuthDiscordRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/api/auth/discord/callback': typeof ApiAuthDiscordCallbackRoute
 }
@@ -132,6 +148,8 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/terms': typeof TermsRoute
   '/api/auth/discord': typeof ApiAuthDiscordRouteWithChildren
+  '/api/auth/logout': typeof ApiAuthLogoutRoute
+  '/api/auth/session': typeof ApiAuthSessionRoute
   '/auth/discord/callback': typeof AuthDiscordCallbackRoute
   '/api/auth/discord/callback': typeof ApiAuthDiscordCallbackRoute
 }
@@ -149,6 +167,8 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/api/auth/discord'
+    | '/api/auth/logout'
+    | '/api/auth/session'
     | '/auth/discord/callback'
     | '/api/auth/discord/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -164,6 +184,8 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/api/auth/discord'
+    | '/api/auth/logout'
+    | '/api/auth/session'
     | '/auth/discord/callback'
     | '/api/auth/discord/callback'
   id:
@@ -179,6 +201,8 @@ export interface FileRouteTypes {
     | '/support'
     | '/terms'
     | '/api/auth/discord'
+    | '/api/auth/logout'
+    | '/api/auth/session'
     | '/auth/discord/callback'
     | '/api/auth/discord/callback'
   fileRoutesById: FileRoutesById
@@ -195,6 +219,8 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   TermsRoute: typeof TermsRoute
   ApiAuthDiscordRoute: typeof ApiAuthDiscordRouteWithChildren
+  ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
+  ApiAuthSessionRoute: typeof ApiAuthSessionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -276,6 +302,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthDiscordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/logout': {
+      id: '/api/auth/logout'
+      path: '/api/auth/logout'
+      fullPath: '/api/auth/logout'
+      preLoaderRoute: typeof ApiAuthLogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/session': {
+      id: '/api/auth/session'
+      path: '/api/auth/session'
+      fullPath: '/api/auth/session'
+      preLoaderRoute: typeof ApiAuthSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/discord/callback': {
       id: '/auth/discord/callback'
       path: '/discord/callback'
@@ -327,6 +367,8 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   ApiAuthDiscordRoute: ApiAuthDiscordRouteWithChildren,
+  ApiAuthLogoutRoute: ApiAuthLogoutRoute,
+  ApiAuthSessionRoute: ApiAuthSessionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
