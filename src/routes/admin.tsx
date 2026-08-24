@@ -237,6 +237,14 @@ function Centered({ children }: { children: React.ReactNode }) {
 type Copy = (typeof dictionary)["en"];
 type X = (typeof extra)["en"];
 
+function adminMutationError(error: unknown, copy: Copy) {
+  if (error instanceof Response) {
+    if (error.status === 429) return copy.errors.rate_limited;
+    if (error.status === 401 || error.status === 403) return copy.admin.denied;
+  }
+  return error instanceof Error && error.message ? error.message : copy.common.error;
+}
+
 type UserPatch = {
   userId: string;
   planCode?: string;
@@ -1119,8 +1127,11 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
 
   const remove = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
-    onSuccess: invalidate,
-    onError: (e) => toast.error(e instanceof Error ? e.message : copy.common.error),
+    onSuccess: () => {
+      toast.success(x.saved);
+      invalidate();
+    },
+    onError: (error) => toast.error(adminMutationError(error, copy)),
   });
 
   return (
@@ -1221,8 +1232,18 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
                 >
                   {x.edit}
                 </button>
-                <button onClick={() => remove.mutate(row.id)} className={`${btn} text-destructive`}>
-                  <Trash2 className="h-3.5 w-3.5" />
+                <button
+                  type="button"
+                  aria-label={copy.admin.delete}
+                  disabled={remove.isPending}
+                  onClick={() => remove.mutate(row.id)}
+                  className={`${btn} text-destructive`}
+                >
+                  {remove.isPending && remove.variables === row.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
             </div>

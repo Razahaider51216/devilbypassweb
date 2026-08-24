@@ -86,9 +86,13 @@ function consumeInMemoryRateLimit(ip: string, now = Date.now()): boolean {
 
 async function isRequestAllowed(request: Request, env: WorkerEnv): Promise<boolean> {
   const ip = clientIp(request);
+  // Page loads and React Query refetches must not consume the same bucket as
+  // authenticated admin mutations. Keep one read and one write bucket per IP.
+  const requestClass = ["GET", "HEAD", "OPTIONS"].includes(request.method) ? "read" : "write";
+  const key = `${ip}:${requestClass}`;
   if (env.IP_RATE_LIMITER) {
     try {
-      const result = await env.IP_RATE_LIMITER.limit({ key: ip });
+      const result = await env.IP_RATE_LIMITER.limit({ key });
       return result.success;
     } catch (error) {
       // A binding/configuration failure must not leave expensive handlers
@@ -96,7 +100,7 @@ async function isRequestAllowed(request: Request, env: WorkerEnv): Promise<boole
       console.error("IP_RATE_LIMITER failed; using isolate-local fallback", error);
     }
   }
-  return consumeInMemoryRateLimit(ip);
+  return consumeInMemoryRateLimit(key);
 }
 
 function rateLimitedResponse(request: Request): Response {
