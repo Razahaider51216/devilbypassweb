@@ -1,6 +1,7 @@
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { getSqlite } from "./database.server";
 import { hashPassword, sessionForUser } from "./auth.server";
+import { randomToken } from "./random.server";
 import { sessionCookie } from "./session-cookie.server";
 import { serverEnv } from "./runtime-env.server";
 
@@ -190,7 +191,7 @@ function signInDiscordUserSqlite(discord: DiscordUser) {
     try {
       db.prepare(
         "INSERT INTO users(id,email,password_hash,discord_id,created_at) VALUES (?,?,?,?,?)",
-      ).run(id, email, hashPassword(randomBytes(48).toString("base64url")), discord.id, stamp);
+      ).run(id, email, hashPassword(randomToken(48)), discord.id, stamp);
       db.prepare(
         `INSERT INTO profiles
         (id,username,email,display_name,avatar_url,discord_username,plan_code,usage_date,created_at,updated_at)
@@ -256,7 +257,7 @@ async function signInDiscordUser(discord: DiscordUser) {
     discordUsername: discord.username,
     displayName: discord.global_name || discord.username,
     avatarUrl: avatarUrl(discord),
-    passwordHash: hashPassword(randomBytes(48).toString("base64url")),
+    passwordHash: hashPassword(randomToken(48)),
     isOwner: ownerDiscordId.length > 0 && discord.id === ownerDiscordId,
   });
   return { token: sessionForUser(user), user };
@@ -265,7 +266,7 @@ async function signInDiscordUser(discord: DiscordUser) {
 export function beginDiscordAuth(request: Request) {
   try {
     const { clientId, redirectUri } = discordConfig(request);
-    const state = randomBytes(32).toString("base64url");
+    const state = randomToken(32);
     const authorize = new URL("https://discord.com/oauth2/authorize");
     authorize.searchParams.set("response_type", "code");
     authorize.searchParams.set("client_id", clientId);

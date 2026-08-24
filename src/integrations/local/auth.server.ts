@@ -1,10 +1,11 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { getSqlite } from "./database.server";
+import { randomToken } from "./random.server";
 import { serverEnv } from "./runtime-env.server";
 
 export type SessionClaims = { sub: string; email: string; exp: number; iat: number; jti: string };
 
-const developmentSessionSecret = randomBytes(32).toString("base64url");
+let developmentSessionSecret: string | undefined;
 
 function sessionSecret() {
   const configured = serverEnv("SESSION_SECRET");
@@ -14,13 +15,13 @@ function sessionSecret() {
   }
   // A process-local value prevents development sessions from being forgeable with
   // a credential published in source control. Sessions reset when dev restarts.
+  developmentSessionSecret ??= randomToken(32);
   return developmentSessionSecret;
 }
 
 /** Generates an unusable random credential for the legacy NOT NULL database column. */
-export function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+export function hashPassword(_password: string) {
+  return `discord-only:${randomToken(48)}`;
 }
 
 export function sessionForUser(user: { id: string; email: string }) {
@@ -30,7 +31,7 @@ export function sessionForUser(user: { id: string; email: string }) {
     email: user.email,
     iat: issued,
     exp: issued + 60 * 60 * 24 * 7,
-    jti: randomBytes(24).toString("base64url"),
+    jti: randomToken(24),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = createHmac("sha256", sessionSecret()).update(body).digest("base64url");
