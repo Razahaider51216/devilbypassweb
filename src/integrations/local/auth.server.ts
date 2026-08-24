@@ -10,6 +10,16 @@ let developmentSessionSecret: string | undefined;
 function sessionSecret() {
   const configured = serverEnv("SESSION_SECRET");
   if (configured && configured.length >= 32) return configured;
+  // Cloudflare Workers do not always expose NODE_ENV and each isolate has its
+  // own module state. Derive a separate, stable signing key from the existing
+  // server-only OAuth secret so sessions remain valid across isolates. A
+  // dedicated SESSION_SECRET is still preferred and takes precedence.
+  const oauthSecret = serverEnv("DISCORD_CLIENT_SECRET");
+  if (oauthSecret.length >= 32) {
+    return createHmac("sha256", oauthSecret)
+      .update("devildev-session-signing-v1")
+      .digest("base64url");
+  }
   if (serverEnv("NODE_ENV") === "production") {
     throw new Error("SESSION_SECRET must contain at least 32 characters");
   }
