@@ -126,12 +126,14 @@ function stateCookie(request: Request, state: string, maxAge = 600) {
 }
 
 function authRedirect(request: Request, error?: string, token?: string) {
-  const destination = new URL("/auth", requestOrigin(request));
+  const destination = new URL(token ? "/" : "/auth", requestOrigin(request));
   if (error) destination.searchParams.set("discord_error", error);
-  const cookies = [stateCookie(request, "", 0)];
-  if (token) cookies.push(sessionCookie(request, token));
   const headers = new Headers({ location: destination.toString(), "cache-control": "no-store" });
-  for (const cookie of cookies) headers.append("set-cookie", cookie);
+  // Cloudflare Workers may fold multiple Set-Cookie values while a Response is
+  // copied through middleware. Send exactly one cookie so the browser always
+  // accepts the authenticated session. The short-lived OAuth state expires on
+  // its own and is overwritten at the next login attempt.
+  headers.set("set-cookie", token ? sessionCookie(request, token) : stateCookie(request, "", 0));
   return new Response(null, {
     status: 303,
     headers,
