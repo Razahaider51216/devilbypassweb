@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 # Keep this enabled until a Custom Domain has been attached. Once the domain
 # works, change this to false so attackers cannot bypass the zone WAF by using
 # the public *.workers.dev hostname.
-workers_dev = true
+workers_dev = false
 
 [assets]
 directory = "./dist/client"

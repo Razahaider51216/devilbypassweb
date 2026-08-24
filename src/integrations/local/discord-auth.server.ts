@@ -7,9 +7,10 @@ import { serverEnv } from "./runtime-env.server";
 
 const STATE_COOKIE = "devildev.discord_state";
 const DISCORD_API = "https://discord.com/api/v10";
+const PRODUCTION_ORIGIN = "https://devilbypass.dev";
 const PUBLIC_ORIGIN_ENV_KEYS = [
-  "DISCORD_PUBLIC_ORIGIN",
   "PUBLIC_SITE_URL",
+  "DISCORD_PUBLIC_ORIGIN",
   "APP_URL",
   "SITE_URL",
   "RENDER_EXTERNAL_URL",
@@ -53,10 +54,19 @@ function configuredPublicOrigin() {
 }
 
 function requestOrigin(request: Request) {
+  const url = new URL(request.url);
+  // The custom production domain is canonical even while an old workers.dev
+  // origin remains in the Cloudflare dashboard during the domain migration.
+  if (
+    url.protocol === "https:" &&
+    ["devilbypass.dev", "www.devilbypass.dev"].includes(url.hostname)
+  ) {
+    return PRODUCTION_ORIGIN;
+  }
+
   const configured = configuredPublicOrigin();
   if (configured) return configured;
 
-  const url = new URL(request.url);
   const forwardedProto =
     firstHeader(request.headers.get("x-forwarded-proto")) ||
     firstHeader(request.headers.get("x-forwarded-protocol")) ||
