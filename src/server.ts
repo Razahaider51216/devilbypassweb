@@ -7,6 +7,21 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
+type RateLimitBinding = {
+  limit: (options: { key: string }) => Promise<{ success: boolean }>;
+};
+
+type WorkerEnv = Record<string, unknown> & {
+  IP_RATE_LIMITER?: RateLimitBinding;
+};
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 20;
+const RATE_LIMIT_MAX_IPS = 10_000;
+
+type InMemoryRateLimit = { count: number; resetsAt: number };
+const inMemoryRateLimits = new Map<string, InMemoryRateLimit>();
+
 declare global {
   var __DEVILBYPASS_RUNTIME_ENV: Record<string, string> | undefined;
 }
@@ -39,6 +54,65 @@ function applyRuntimeEnv(env: unknown) {
     }
   }
   globalThis.__DEVILBYPASS_RUNTIME_ENV = runtimeEnv;
+}
+
+function clientIp(request: Request): string {
+  // Cloudflare sets and sanitizes CF-Connecting-IP before invoking the Worker.
+  // The fallback value is useful only when running the app locally.
+  return request.headers.get("cf-connecting-ip")?.trim() || "local-or-unknown";
+}
+
+function consumeInMemoryRateLimit(ip: string, now = Date.now()): boolean {
+  const current = inMemoryRateLimits.get(ip);
+  if (!current || current.resetsAt <= now) {
+    if (inMemoryRateLimits.size >= RATE_LIMIT_MAX_IPS) {
+      for (const [key, value] of inMemoryRateLimits) {
+        if (value.resetsAt <= now) inMemoryRateLimits.delete(key);
+      }
+      // Isolates do not share this map. Keep it bounded if an attacker keeps
+      // presenting new IPs and no expired entries were available to remove.
+      if (inMemoryRateLimits.size >= RATE_LIMIT_MAX_IPS) {
+        const oldestKey = inMemoryRateLimits.keys().next().value as string | undefined;
+        if (oldestKey) inMemoryRateLimits.delete(oldestKey);
+      }
+    }
+    inMemoryRateLimits.set(ip, { count: 1, resetsAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+
+  current.count += 1;
+  return current.count <= RATE_LIMIT_MAX_REQUESTS;
+}
+
+async function isRequestAllowed(request: Request, env: WorkerEnv): Promise<boolean> {
+  const ip = clientIp(request);
+  if (env.IP_RATE_LIMITER) {
+    try {
+      const result = await env.IP_RATE_LIMITER.limit({ key: ip });
+      return result.success;
+    } catch (error) {
+      // A binding/configuration failure must not leave expensive handlers
+      // completely unprotected.
+      console.error("IP_RATE_LIMITER failed; using isolate-local fallback", error);
+    }
+  }
+  return consumeInMemoryRateLimit(ip);
+}
+
+function rateLimitedResponse(request: Request): Response {
+  return hardenResponse(
+    request,
+    Response.json(
+      { error: "too_many_requests", message: "Too many requests. Please try again later." },
+      {
+        status: 429,
+        headers: {
+          "cache-control": "no-store",
+          "retry-after": String(RATE_LIMIT_WINDOW_MS / 1000),
+        },
+      },
+    ),
+  );
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
@@ -114,8 +188,11 @@ function hardenResponse(request: Request, response: Response): Response {
 }
 
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request: Request, env: WorkerEnv, ctx: unknown) {
     try {
+      if (!(await isRequestAllowed(request, env))) {
+        return rateLimitedResponse(request);
+      }
       applyRuntimeEnv(env);
 
       const requestUrl = new URL(request.url);

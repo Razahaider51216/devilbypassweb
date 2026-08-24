@@ -1,5 +1,19 @@
 # DevilDev Hub
 
+## Cloudflare Worker rate limiting
+
+The Worker entry point rate-limits each `cf-connecting-ip` to 20 requests per
+60 seconds using the `IP_RATE_LIMITER` binding configured in `wrangler.toml`.
+If that binding is unavailable, the Worker uses a bounded, isolate-local
+in-memory fallback. The fallback is best-effort only because maps are neither
+persistent nor shared between Cloudflare isolates.
+
+Build and deploy with `npm run build` followed by `npx wrangler deploy`.
+After attaching and testing a Cloudflare Custom Domain, set
+`workers_dev = false` in `wrangler.toml`. Also configure a zone-level WAF rate
+limiting rule: a `429` returned by Worker code still consumes a Workers request
+and cannot by itself prevent exhaustion of the Free plan's daily allowance.
+
 ## Discord login
 
 1. Create an application in the [Discord Developer Portal](https://discord.com/developers/applications).
