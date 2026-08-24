@@ -81,7 +81,10 @@ function hardenResponse(request: Request, response: Response): Response {
   headers.set("x-permitted-cross-domain-policies", "none");
   headers.set(
     "content-security-policy",
-    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self'; connect-src 'self' https://discord.com; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
+    // TanStack Start emits inline hydration/streaming bootstrap scripts. It does
+    // not currently expose their nonce at this response boundary, so inline
+    // scripts must remain enabled until nonce propagation is wired end-to-end.
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://discord.com; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
   );
   headers.delete("server");
   headers.delete("x-powered-by");
