@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { neon, Pool, type PoolClient } from "@neondatabase/serverless";
+import { neon, neonConfig, Pool, type PoolClient } from "@neondatabase/serverless";
 import { serverEnv } from "./runtime-env.server";
 
 type Row = Record<string, unknown>;
@@ -35,6 +35,10 @@ type Filter = { sql: string; values: unknown[] };
 
 let initialization: Promise<void> | undefined;
 
+// Pool.query can use Neon's HTTP transport when no pool lifecycle listeners
+// are registered. This is required by stateless Cloudflare Worker requests.
+neonConfig.poolQueryViaFetch = true;
+
 function now() {
   return new Date().toISOString();
 }
@@ -53,13 +57,15 @@ function databaseUrl() {
 }
 
 function createPool() {
-  const pool = new Pool({
+  return new Pool({
     connectionString: databaseUrl(),
     max: 1,
     connectionTimeoutMillis: 15_000,
   });
-  pool.on("error", (error: Error) => console.error("Neon PostgreSQL pool error", error));
-  return pool;
+}
+
+function isCloudflareWorker() {
+  return typeof navigator !== "undefined" && navigator.userAgent === "Cloudflare-Workers";
 }
 
 export function isPostgresConfigured() {
@@ -383,6 +389,11 @@ async function initialize() {
 }
 
 async function ensurePostgres() {
+  // The schema already exists in deployed databases. Running the legacy seed
+  // transaction per Worker isolate would require a WebSocket connection, which
+  // is not safe across stateless fetch lifetimes. Migrations used by auth are
+  // created separately through the HTTP driver.
+  if (isCloudflareWorker()) return;
   if (!initialization) {
     initialization = initialize().catch((error) => {
       initialization = undefined;
@@ -879,54 +890,35 @@ export async function postgresSignInDiscordUser(input: {
   isOwner: boolean;
 }) {
   await ensurePostgres();
-  const pool = createPool();
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    let user = (
-      await client.query("SELECT id,email FROM users WHERE discord_id=$1 FOR UPDATE", [
-        input.discordId,
-      ])
-    ).rows[0] as { id: string; email: string } | undefined;
-    if (!user && input.email && input.verified) {
-      user = (
-        await client.query("SELECT id,email FROM users WHERE LOWER(email)=LOWER($1) FOR UPDATE", [
-          input.email,
-        ])
-      ).rows[0] as { id: string; email: string } | undefined;
-      if (user)
-        await client.query("UPDATE users SET discord_id=$1 WHERE id=$2", [
-          input.discordId,
-          user.id,
-        ]);
-    }
-    const stamp = now();
-    if (!user) {
-      const id = randomUUID();
-      const email = input.email || `discord-${input.discordId}@users.invalid`;
-      const normalized =
-        input.discordUsername.toLowerCase().replace(/[^a-z0-9_]/g, "") || "discord";
-      const base = normalized.slice(0, 24);
-      let username = base;
-      let suffix = 0;
-      while (
-        (await client.query("SELECT 1 FROM profiles WHERE LOWER(username)=LOWER($1)", [username]))
-          .rowCount
-      ) {
-        suffix += 1;
-        username = `${base.slice(0, 27 - String(suffix).length)}_${suffix}`;
-      }
-      await client.query(
+  const sql = httpSql();
+  let user = (
+    await sql.query("SELECT id,email FROM users WHERE discord_id=$1", [input.discordId])
+  )[0] as { id: string; email: string } | undefined;
+  if (!user && input.email && input.verified) {
+    user = (
+      await sql.query("SELECT id,email FROM users WHERE LOWER(email)=LOWER($1)", [input.email])
+    )[0] as { id: string; email: string } | undefined;
+    if (user)
+      await sql.query("UPDATE users SET discord_id=$1 WHERE id=$2", [input.discordId, user.id]);
+  }
+  const stamp = now();
+  if (!user) {
+    const id = randomUUID();
+    const email = input.email || `discord-${input.discordId}@users.invalid`;
+    const normalized = input.discordUsername.toLowerCase().replace(/[^a-z0-9_]/g, "") || "discord";
+    const username = `${normalized.slice(0, 17)}_${input.discordId.slice(-6)}`;
+    await sql.transaction((tx) => [
+      tx.query(
         "INSERT INTO users(id,email,password_hash,discord_id,created_at) VALUES ($1,$2,$3,$4,$5)",
         [id, email, input.passwordHash, input.discordId, stamp],
-      );
-      await client.query(
+      ),
+      tx.query(
         `INSERT INTO profiles
-        (id,username,email,display_name,avatar_url,discord_username,plan_code,usage_date,created_at,updated_at)
-        VALUES ($1,$2,$3,$4,$5,$6,'free',$7,$8,$8)`,
+         (id,username,email,display_name,avatar_url,discord_username,plan_code,usage_date,created_at,updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,'free',$7,$8,$8)`,
         [
           id,
-          username || `discord_${input.discordId.slice(-8)}`,
+          username,
           input.email,
           input.displayName,
           input.avatarUrl,
@@ -934,32 +926,27 @@ export async function postgresSignInDiscordUser(input: {
           stamp.slice(0, 10),
           stamp,
         ],
-      );
-      await client.query(
-        "INSERT INTO user_roles(id,user_id,role,created_at) VALUES ($1,$2,$3,$4)",
-        [randomUUID(), id, input.isOwner ? "admin" : "user", stamp],
-      );
-      user = { id, email };
-    } else {
-      await client.query(
-        "UPDATE profiles SET display_name=$1,avatar_url=$2,discord_username=$3,updated_at=$4 WHERE id=$5",
-        [input.displayName, input.avatarUrl, input.discordUsername, stamp, user.id],
-      );
-    }
-    if (input.isOwner)
-      await client.query(
-        "INSERT INTO user_roles(id,user_id,role,created_at) VALUES ($1,$2,'admin',$3) ON CONFLICT (user_id,role) DO NOTHING",
-        [randomUUID(), user.id, stamp],
-      );
-    await client.query("COMMIT");
-    return user;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-    await pool.end();
+      ),
+      tx.query("INSERT INTO user_roles(id,user_id,role,created_at) VALUES ($1,$2,$3,$4)", [
+        randomUUID(),
+        id,
+        input.isOwner ? "admin" : "user",
+        stamp,
+      ]),
+    ]);
+    user = { id, email };
+  } else {
+    await sql.query(
+      "UPDATE profiles SET display_name=$1,avatar_url=$2,discord_username=$3,updated_at=$4 WHERE id=$5",
+      [input.displayName, input.avatarUrl, input.discordUsername, stamp, user.id],
+    );
   }
+  if (input.isOwner)
+    await sql.query(
+      "INSERT INTO user_roles(id,user_id,role,created_at) VALUES ($1,$2,'admin',$3) ON CONFLICT (user_id,role) DO NOTHING",
+      [randomUUID(), user.id, stamp],
+    );
+  return user;
 }
 
 export const postgresDatabase = {
