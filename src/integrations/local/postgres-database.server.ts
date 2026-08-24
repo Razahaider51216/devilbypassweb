@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { Pool, type PoolClient } from "@neondatabase/serverless";
+import { neon, Pool, type PoolClient } from "@neondatabase/serverless";
 import { serverEnv } from "./runtime-env.server";
 
 type Row = Record<string, unknown>;
@@ -825,41 +825,37 @@ async function rpc(name: string, args: Row): Promise<Result> {
   }
 }
 
-export async function postgresIsSessionRevoked(jti: string) {
-  await ensurePostgres();
-  const pool = createPool();
-  try {
-    const result = await pool.query("SELECT 1 FROM revoked_sessions WHERE jti=$1", [jti]);
-    return (result.rowCount ?? 0) > 0;
-  } finally {
-    await pool.end();
-  }
+function httpSql() {
+  return neon(databaseUrl());
+}
+
+async function ensureRevokedSessionsTable() {
+  await httpSql().query(
+    "CREATE TABLE IF NOT EXISTS revoked_sessions (jti TEXT PRIMARY KEY, expires_at BIGINT NOT NULL)",
+  );
+}
+
+/** Session checks use Neon's HTTP transport, avoiding WebSocket pools in stateless Workers. */
+export async function postgresVerifySession(id: string, email: string, jti: string) {
+  await ensureRevokedSessionsTable();
+  const rows = await httpSql().query(
+    `SELECT EXISTS(
+       SELECT 1 FROM users
+       WHERE id=$1 AND email=$2
+     ) AND NOT EXISTS(
+       SELECT 1 FROM revoked_sessions WHERE jti=$3
+     ) AS valid`,
+    [id, email, jti],
+  );
+  return rows[0]?.["valid"] === true;
 }
 
 export async function postgresRevokeSession(jti: string, expiresAt: number) {
-  await ensurePostgres();
-  const pool = createPool();
-  try {
-    await pool.query(
-      "INSERT INTO revoked_sessions(jti,expires_at) VALUES ($1,$2) ON CONFLICT (jti) DO NOTHING",
-      [jti, expiresAt],
-    );
-  } finally {
-    await pool.end();
-  }
-}
-
-export async function postgresSessionUser(id: string, email: string) {
-  await ensurePostgres();
-  const pool = createPool();
-  try {
-    return (
-      ((await pool.query("SELECT 1 FROM users WHERE id=$1 AND email=$2", [id, email])).rowCount ??
-        0) > 0
-    );
-  } finally {
-    await pool.end();
-  }
+  await ensureRevokedSessionsTable();
+  await httpSql().query(
+    "INSERT INTO revoked_sessions(jti,expires_at) VALUES ($1,$2) ON CONFLICT (jti) DO NOTHING",
+    [jti, expiresAt],
+  );
 }
 
 export async function postgresDeleteUser(userId: string) {

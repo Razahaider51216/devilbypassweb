@@ -47,12 +47,12 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
     const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as SessionClaims;
     if (!claims.sub || !claims.email || !claims.jti || claims.exp <= Math.floor(Date.now() / 1000))
       return null;
-    if (await isSessionRevoked(claims.jti)) return null;
     const exists = serverEnv("DATABASE_URL")
-      ? await import("./postgres-database.server").then(({ postgresSessionUser }) =>
-          postgresSessionUser(claims.sub, claims.email),
+      ? await import("./postgres-database.server").then(({ postgresVerifySession }) =>
+          postgresVerifySession(claims.sub, claims.email, claims.jti),
         )
-      : Boolean(
+      : !isSqliteSessionRevoked(claims.jti) &&
+        Boolean(
           getSqlite()
             .prepare("SELECT 1 FROM users WHERE id=? AND email=?")
             .get(claims.sub, claims.email),
@@ -63,11 +63,7 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
   }
 }
 
-async function isSessionRevoked(jti: string) {
-  if (serverEnv("DATABASE_URL")) {
-    const { postgresIsSessionRevoked } = await import("./postgres-database.server");
-    return postgresIsSessionRevoked(jti);
-  }
+function isSqliteSessionRevoked(jti: string) {
   return Boolean(getSqlite().prepare("SELECT 1 FROM revoked_sessions WHERE jti=?").get(jti));
 }
 
