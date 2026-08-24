@@ -34,7 +34,7 @@ export function normalizeDomain(raw: string): string {
 export function siteLogoUrl(domainOrPattern: string): string | null {
   const host = normalizeDomain(domainOrPattern).split("/")[0]?.replace(/^\*\./, "");
   if (!host || !/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) return null;
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`;
+  return `https://favicon.im/${encodeURIComponent(host)}?larger=true`;
 }
 
 const UNSAFE = /[<>"'`\\]|javascript:|data:|vbscript:|on[a-z]+=/i;
