@@ -107,6 +107,11 @@ async function initialize() {
         created_at TEXT NOT NULL,
         UNIQUE(user_id, role)
       );
+      CREATE TABLE IF NOT EXISTS revoked_sessions (
+        jti TEXT PRIMARY KEY,
+        expires_at BIGINT NOT NULL
+      );
+      DELETE FROM revoked_sessions WHERE expires_at <= EXTRACT(EPOCH FROM NOW())::BIGINT;
       CREATE TABLE IF NOT EXISTS plans (
         code TEXT PRIMARY KEY,
         name_en TEXT NOT NULL,
@@ -817,6 +822,30 @@ async function rpc(name: string, args: Row): Promise<Result> {
     };
   } finally {
     await pool?.end();
+  }
+}
+
+export async function postgresIsSessionRevoked(jti: string) {
+  await ensurePostgres();
+  const pool = createPool();
+  try {
+    const result = await pool.query("SELECT 1 FROM revoked_sessions WHERE jti=$1", [jti]);
+    return (result.rowCount ?? 0) > 0;
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function postgresRevokeSession(jti: string, expiresAt: number) {
+  await ensurePostgres();
+  const pool = createPool();
+  try {
+    await pool.query(
+      "INSERT INTO revoked_sessions(jti,expires_at) VALUES ($1,$2) ON CONFLICT (jti) DO NOTHING",
+      [jti, expiresAt],
+    );
+  } finally {
+    await pool.end();
   }
 }
 

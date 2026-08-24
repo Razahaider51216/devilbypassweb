@@ -125,14 +125,10 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         {/* Applies the saved theme before paint so there is no wrong-theme flash. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{var t=localStorage.getItem('devildev.theme')==='light'?'light':'dark';var r=document.documentElement;r.classList.toggle('light',t==='light');r.classList.toggle('dark',t==='dark');r.style.colorScheme=t;}catch(e){}",
-          }}
-        />
+        <script src="/theme-init.js" />
         {/* Removed third-party ad script (previously injected by ad network). */}
         <script
+          type="application/json"
           dangerouslySetInnerHTML={{
             __html: `(function(){
               try{

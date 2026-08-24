@@ -81,7 +81,7 @@ function hardenResponse(request: Request, response: Response): Response {
   headers.set("x-permitted-cross-domain-policies", "none");
   headers.set(
     "content-security-policy",
-    "base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'",
+    "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; object-src 'none'; script-src 'self'; connect-src 'self' https://discord.com; img-src 'self' data: https://cdn.discordapp.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; upgrade-insecure-requests",
   );
   headers.delete("server");
   headers.delete("x-powered-by");
@@ -130,6 +130,36 @@ export default {
       ) {
         const { finishDiscordAuth } = await import("./integrations/local/discord-auth.server");
         return hardenResponse(request, await finishDiscordAuth(request));
+      }
+      if (requestUrl.pathname === "/api/auth/session" && request.method === "GET") {
+        const { sessionToken } = await import("./integrations/local/session-cookie.server");
+        const { verifySessionToken } = await import("./integrations/local/auth.server");
+        const token = sessionToken(request);
+        const claims = token ? await verifySessionToken(token) : null;
+        return hardenResponse(
+          request,
+          Response.json({
+            session: claims ? { user: { id: claims.sub, email: claims.email } } : null,
+          }),
+        );
+      }
+      if (requestUrl.pathname === "/api/auth/logout" && request.method === "POST") {
+        const { sessionCookie, sessionToken, validateSameOrigin } =
+          await import("./integrations/local/session-cookie.server");
+        if (!validateSameOrigin(request))
+          return hardenResponse(request, new Response(null, { status: 403 }));
+        const token = sessionToken(request);
+        if (token) {
+          const { revokeSession } = await import("./integrations/local/auth.server");
+          await revokeSession(token);
+        }
+        return hardenResponse(
+          request,
+          new Response(null, {
+            status: 204,
+            headers: { "set-cookie": sessionCookie(request, "", 0) },
+          }),
+        );
       }
       if (request.method === "GET" && requestUrl.pathname.startsWith("/uploads/")) {
         const { serveUpload } = await import("./integrations/local/storage.server");

@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { getSqlite } from "./database.server";
 import { hashPassword, sessionForUser } from "./auth.server";
+import { sessionCookie } from "./session-cookie.server";
 import { serverEnv } from "./runtime-env.server";
 
 const STATE_COOKIE = "devildev.discord_state";
@@ -123,28 +124,22 @@ function stateCookie(request: Request, state: string, maxAge = 600) {
   return `${STATE_COOKIE}=${encodeURIComponent(state)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${secure}`;
 }
 
-function authRedirect(request: Request, key: "discord_session" | "discord_error", value: string) {
+function authRedirect(request: Request, error?: string, token?: string) {
   const destination = new URL("/auth", requestOrigin(request));
-  destination.hash = `${key}=${encodeURIComponent(value)}`;
+  if (error) destination.searchParams.set("discord_error", error);
+  const cookies = [stateCookie(request, "", 0)];
+  if (token) cookies.push(sessionCookie(request, token));
+  const headers = new Headers({ location: destination.toString(), "cache-control": "no-store" });
+  for (const cookie of cookies) headers.append("set-cookie", cookie);
   return new Response(null, {
-    status: 302,
-    headers: {
-      location: destination.toString(),
-      "set-cookie": stateCookie(request, "", 0),
-      "cache-control": "no-store",
-    },
+    status: 303,
+    headers,
   });
 }
 
 async function discordErrorMessage(response: Response, redirectUri: string) {
-  let body = "";
-  try {
-    body = await response.text();
-  } catch {
-    // The status is still enough to guide the operator when the body is unreadable.
-  }
   console.error(
-    `Discord token exchange failed with ${response.status} ${response.statusText} for redirect_uri=${redirectUri}${body ? `: ${body}` : ""}`,
+    `Discord token exchange failed with ${response.status} ${response.statusText} for redirect_uri=${redirectUri}`,
   );
   return `Discord rejected the login request. Redirect URI in use: ${redirectUri}`;
 }
@@ -155,15 +150,6 @@ function avatarUrl(user: DiscordUser) {
   }
   const index = Number((BigInt(user.id) >> 22n) % 6n);
   return `https://cdn.discordapp.com/embed/avatars/${index}.png`;
-}
-
-function sessionUser(user: LocalUser, discord: DiscordUser) {
-  return {
-    ...user,
-    displayName: discord.global_name || discord.username,
-    avatarUrl: avatarUrl(discord),
-    discordUsername: discord.username,
-  };
 }
 
 function internalUsername(discordUsername: string, discordId: string) {
@@ -297,7 +283,6 @@ export function beginDiscordAuth(request: Request) {
   } catch (error) {
     return authRedirect(
       request,
-      "discord_error",
       error instanceof Error ? error.message : "Unable to start Discord login",
     );
   }
@@ -337,15 +322,8 @@ export async function finishDiscordAuth(request: Request) {
     if (!discord.id || !discord.username) throw new Error("Discord returned an invalid profile");
 
     const signedIn = await signInDiscordUser(discord);
-    const payload = Buffer.from(
-      JSON.stringify({ token: signedIn.token, user: sessionUser(signedIn.user, discord) }),
-    ).toString("base64url");
-    return authRedirect(request, "discord_session", payload);
+    return authRedirect(request, undefined, signedIn.token);
   } catch (error) {
-    return authRedirect(
-      request,
-      "discord_error",
-      error instanceof Error ? error.message : "Discord login failed",
-    );
+    return authRedirect(request, error instanceof Error ? error.message : "Discord login failed");
   }
 }

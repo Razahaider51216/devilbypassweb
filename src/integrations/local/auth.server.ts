@@ -2,7 +2,9 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { getSqlite } from "./database.server";
 import { serverEnv } from "./runtime-env.server";
 
-export type SessionClaims = { sub: string; email: string; exp: number; iat: number };
+export type SessionClaims = { sub: string; email: string; exp: number; iat: number; jti: string };
+
+const developmentSessionSecret = randomBytes(32).toString("base64url");
 
 function sessionSecret() {
   const configured = serverEnv("SESSION_SECRET");
@@ -10,7 +12,9 @@ function sessionSecret() {
   if (serverEnv("NODE_ENV") === "production") {
     throw new Error("SESSION_SECRET must contain at least 32 characters");
   }
-  return "devildev-local-development-secret-change-me";
+  // A process-local value prevents development sessions from being forgeable with
+  // a credential published in source control. Sessions reset when dev restarts.
+  return developmentSessionSecret;
 }
 
 /** Generates an unusable random credential for the legacy NOT NULL database column. */
@@ -26,6 +30,7 @@ export function sessionForUser(user: { id: string; email: string }) {
     email: user.email,
     iat: issued,
     exp: issued + 60 * 60 * 24 * 7,
+    jti: randomBytes(24).toString("base64url"),
   };
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = createHmac("sha256", sessionSecret()).update(body).digest("base64url");
@@ -40,7 +45,9 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
   if (expected.length !== received.length || !timingSafeEqual(expected, received)) return null;
   try {
     const claims = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as SessionClaims;
-    if (!claims.sub || !claims.email || claims.exp <= Math.floor(Date.now() / 1000)) return null;
+    if (!claims.sub || !claims.email || !claims.jti || claims.exp <= Math.floor(Date.now() / 1000))
+      return null;
+    if (await isSessionRevoked(claims.jti)) return null;
     const exists = serverEnv("DATABASE_URL")
       ? await import("./postgres-database.server").then(({ postgresSessionUser }) =>
           postgresSessionUser(claims.sub, claims.email),
@@ -54,6 +61,27 @@ export async function verifySessionToken(token: string): Promise<SessionClaims |
   } catch {
     return null;
   }
+}
+
+async function isSessionRevoked(jti: string) {
+  if (serverEnv("DATABASE_URL")) {
+    const { postgresIsSessionRevoked } = await import("./postgres-database.server");
+    return postgresIsSessionRevoked(jti);
+  }
+  return Boolean(getSqlite().prepare("SELECT 1 FROM revoked_sessions WHERE jti=?").get(jti));
+}
+
+export async function revokeSession(token: string) {
+  const claims = await verifySessionToken(token);
+  if (!claims) return;
+  if (serverEnv("DATABASE_URL")) {
+    const { postgresRevokeSession } = await import("./postgres-database.server");
+    await postgresRevokeSession(claims.jti, claims.exp);
+    return;
+  }
+  getSqlite()
+    .prepare("INSERT OR IGNORE INTO revoked_sessions(jti, expires_at) VALUES (?,?)")
+    .run(claims.jti, claims.exp);
 }
 
 export async function deleteUser(userId: string) {

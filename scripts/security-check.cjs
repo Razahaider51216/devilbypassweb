@@ -28,6 +28,14 @@ const serverSecretNames = [
   "DISCORD_CLIENT_SECRET",
 ];
 const findings = [];
+const secretPatterns = [
+  [/\bAKIA[0-9A-Z]{16}\b/g, "AWS access key"],
+  [/\bgh[pousr]_[A-Za-z0-9_]{30,}\b/g, "GitHub token"],
+  [/\bsk_(?:live|test)_[A-Za-z0-9]{20,}\b/g, "Stripe secret key"],
+  [/https:\/\/discord(?:app)?\.com\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+/g, "Discord webhook"],
+  [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g, "private key"],
+  [/postgres(?:ql)?:\/\/[^\s:'\"]+:[^\s@'\"]+@/gi, "database credential"],
+];
 
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -53,6 +61,10 @@ function walk(directory) {
       if (value && value.length >= 8 && content.includes(value)) {
         findings.push(`${relative}: contains the value of ${name}`);
       }
+    }
+    for (const [pattern, description] of secretPatterns) {
+      pattern.lastIndex = 0;
+      if (pattern.test(content)) findings.push(`${relative}: contains a possible ${description}`);
     }
   }
 }

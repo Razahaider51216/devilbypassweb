@@ -95,6 +95,11 @@ function migrate(db: DatabaseSync) {
       created_at TEXT NOT NULL,
       UNIQUE(user_id, role)
     );
+    CREATE TABLE IF NOT EXISTS revoked_sessions (
+      jti TEXT PRIMARY KEY,
+      expires_at INTEGER NOT NULL
+    );
+    DELETE FROM revoked_sessions WHERE expires_at <= unixepoch();
     CREATE TABLE IF NOT EXISTS plans (
       code TEXT PRIMARY KEY,
       name_en TEXT NOT NULL,
