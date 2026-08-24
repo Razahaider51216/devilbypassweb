@@ -527,7 +527,8 @@ export const adminSaveAnnouncement = createServerFn({ method: "POST" })
         title_th: z.string().trim().max(120).default(""),
         body_en: z.string().max(1000).default(""),
         body_th: z.string().max(1000).default(""),
-        image_url: z.string().trim().max(500).default(""),
+        image_url: z.string().trim().max(1000).default(""),
+        image_urls: z.array(z.string().trim().min(1).max(1000)).max(20).default([]),
         link_url: z.string().trim().max(500).default(""),
         is_active: z.boolean().default(true),
         sort_order: z.number().int().min(0).max(999).default(0),
@@ -537,7 +538,14 @@ export const adminSaveAnnouncement = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const db = await assertAdmin(context);
     const { id, ...rest } = data;
-    const row = { ...rest, updated_at: new Date().toISOString(), ...(id ? { id } : {}) };
+    const imageUrls = [...new Set(rest.image_urls.map((url) => url.trim()).filter(Boolean))];
+    const row = {
+      ...rest,
+      image_url: imageUrls[0] ?? rest.image_url,
+      image_urls: imageUrls.length > 0 ? imageUrls : rest.image_url ? [rest.image_url] : [],
+      updated_at: new Date().toISOString(),
+      ...(id ? { id } : {}),
+    };
     const { error } = await db.from("announcements").upsert(row);
     if (error) throw new Error(error.message);
     return { ok: true };

@@ -24,7 +24,7 @@ const tableMeta = {
   site_settings: { key: "key", booleans: [], json: [] },
   contact_channels: { key: "id", booleans: ["is_active"], json: [] },
   purchase_contact_links: { key: "id", booleans: ["is_active"], json: [] },
-  announcements: { key: "id", booleans: ["is_active"], json: [] },
+  announcements: { key: "id", booleans: ["is_active"], json: ["image_urls"] },
   changelog_entries: {
     key: "id",
     booleans: ["is_published", "is_important"],
@@ -171,6 +171,7 @@ function migrate(db: DatabaseSync) {
       body_en TEXT NOT NULL DEFAULT '',
       body_th TEXT NOT NULL DEFAULT '',
       image_url TEXT NOT NULL DEFAULT '',
+      image_urls TEXT NOT NULL DEFAULT '[]',
       link_url TEXT NOT NULL DEFAULT '',
       is_active INTEGER NOT NULL DEFAULT 1,
       sort_order INTEGER NOT NULL DEFAULT 0,
@@ -229,6 +230,20 @@ function migrate(db: DatabaseSync) {
   db.exec(
     "CREATE UNIQUE INDEX IF NOT EXISTS users_discord_id_idx ON users(discord_id) WHERE discord_id IS NOT NULL",
   );
+
+  const announcementColumns = new Set(
+    (db.prepare("PRAGMA table_info(announcements)").all() as Array<{ name: string }>).map(
+      (column) => column.name,
+    ),
+  );
+  if (!announcementColumns.has("image_urls")) {
+    db.exec("ALTER TABLE announcements ADD COLUMN image_urls TEXT NOT NULL DEFAULT '[]'");
+    const rows = db
+      .prepare("SELECT id, image_url FROM announcements WHERE image_url <> ''")
+      .all() as Array<{ id: string; image_url: string }>;
+    const update = db.prepare("UPDATE announcements SET image_urls=? WHERE id=?");
+    for (const row of rows) update.run(JSON.stringify([row.image_url]), row.id);
+  }
 
   const schemaVersion = db.prepare("PRAGMA user_version").get() as { user_version: number };
   if (schemaVersion.user_version < 1) {

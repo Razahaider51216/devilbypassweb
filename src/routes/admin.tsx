@@ -5,9 +5,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Ban,
   Check,
+  ChevronLeft,
+  ChevronRight,
+  ImagePlus,
   Loader2,
   RefreshCw,
   Search,
@@ -1071,6 +1076,7 @@ type AnnouncementDraft = {
   body_en: string;
   body_th: string;
   image_url: string;
+  image_urls: string[];
   link_url: string;
   is_active: boolean;
   sort_order: number;
@@ -1082,6 +1088,7 @@ const emptyAnnouncement: AnnouncementDraft = {
   body_en: "",
   body_th: "",
   image_url: "",
+  image_urls: [],
   link_url: "",
   is_active: true,
   sort_order: 0,
@@ -1146,11 +1153,6 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
               onChange={(v) => setDraft({ ...draft, body_th: v })}
             />
             <Text
-              label={x.imageUrl}
-              value={draft.image_url}
-              onChange={(v) => setDraft({ ...draft, image_url: v })}
-            />
-            <Text
               label={x.linkUrl}
               value={draft.link_url}
               onChange={(v) => setDraft({ ...draft, link_url: v })}
@@ -1163,6 +1165,13 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
               }
             />
           </div>
+          <AnnouncementImagesEditor
+            draft={draft}
+            x={x}
+            onChange={(imageUrls) =>
+              setDraft({ ...draft, image_urls: imageUrls, image_url: imageUrls[0] ?? "" })
+            }
+          />
           <div className="mt-3">
             <Toggle
               label={copy.admin.active}
@@ -1170,13 +1179,6 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
               onChange={(v) => setDraft({ ...draft, is_active: v })}
             />
           </div>
-          {draft.image_url ? (
-            <img
-              src={draft.image_url}
-              alt="preview"
-              className="mt-3 max-h-40 rounded-xl border border-border object-cover"
-            />
-          ) : null}
           <div className="mt-3 flex gap-2">
             <button
               disabled={save.isPending}
@@ -1202,12 +1204,19 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
                   {row.title_th || row.title_en || "—"}
                 </p>
                 <p className="truncate text-[11px] text-muted-foreground">
-                  {row.is_active ? "on" : "off"} · {row.image_url ? "image" : "text"}
+                  {row.is_active ? "on" : "off"} · {announcementImages(row).length}{" "}
+                  {announcementImages(row).length === 1 ? "image" : "images"}
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
                 <button
-                  onClick={() => setDraft({ ...emptyAnnouncement, ...row } as AnnouncementDraft)}
+                  onClick={() =>
+                    setDraft({
+                      ...emptyAnnouncement,
+                      ...row,
+                      image_urls: announcementImages(row),
+                    } as AnnouncementDraft)
+                  }
                   className={btn}
                 >
                   {x.edit}
@@ -1220,6 +1229,161 @@ function AnnouncementsTab({ copy, x }: { copy: Copy; x: X }) {
           </Card>
         ))}
       </div>
+    </div>
+  );
+}
+
+function announcementImages(row: { image_url?: string; image_urls?: unknown }): string[] {
+  if (Array.isArray(row.image_urls)) {
+    const urls = row.image_urls.filter(
+      (value): value is string => typeof value === "string" && Boolean(value),
+    );
+    if (urls.length > 0) return urls;
+  }
+  return row.image_url ? [row.image_url] : [];
+}
+
+function AnnouncementImagesEditor({
+  draft,
+  x,
+  onChange,
+}: {
+  draft: AnnouncementDraft;
+  x: X;
+  onChange: (urls: string[]) => void;
+}) {
+  const [newUrl, setNewUrl] = useState("");
+  const [preview, setPreview] = useState(0);
+  const images = draft.image_urls;
+  const activePreview = images[Math.min(preview, Math.max(images.length - 1, 0))];
+
+  const addImage = () => {
+    const value = newUrl.trim();
+    if (!value || images.includes(value) || images.length >= 20) return;
+    onChange([...images, value]);
+    setPreview(images.length);
+    setNewUrl("");
+  };
+
+  const moveImage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+    const next = [...images];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    onChange(next);
+    setPreview(target);
+  };
+
+  return (
+    <div className="mt-4 rounded-xl border border-border bg-background/60 p-3">
+      <div className="flex items-center gap-2 text-[11px] font-semibold">
+        <ImagePlus className="h-4 w-4" /> {x.imageUrl} ({images.length}/20)
+      </div>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <input
+          value={newUrl}
+          onChange={(event) => setNewUrl(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              addImage();
+            }
+          }}
+          placeholder="https://.../announcement.jpg"
+          className={field}
+        />
+        <button
+          type="button"
+          disabled={!newUrl.trim() || images.length >= 20}
+          onClick={addImage}
+          className={btnSolid}
+        >
+          <ImagePlus className="h-3.5 w-3.5" /> {x.add}
+        </button>
+      </div>
+
+      {activePreview ? (
+        <div className="relative mt-3 overflow-hidden rounded-xl border border-border bg-muted">
+          <img
+            src={activePreview}
+            alt="Announcement preview"
+            className="aspect-[16/7] w-full object-cover"
+          />
+          {images.length > 1 ? (
+            <>
+              <button
+                type="button"
+                aria-label="Previous image"
+                onClick={() => setPreview((value) => (value - 1 + images.length) % images.length)}
+                className="absolute left-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next image"
+                onClick={() => setPreview((value) => (value + 1) % images.length)}
+                className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-white/30 bg-black/50 text-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          ) : null}
+          <span className="absolute bottom-2 right-2 rounded-full bg-black/65 px-2 py-1 text-[10px] font-semibold text-white">
+            {Math.min(preview, images.length - 1) + 1}/{images.length}
+          </span>
+        </div>
+      ) : null}
+
+      {images.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {images.map((url, index) => (
+            <div
+              key={`${url}-${index}`}
+              className="flex items-center gap-2 rounded-lg border border-border bg-card p-2"
+            >
+              <button
+                type="button"
+                onClick={() => setPreview(index)}
+                className="min-w-0 flex-1 truncate text-left text-[10px] text-muted-foreground hover:text-foreground"
+              >
+                {index + 1}. {url}
+              </button>
+              <button
+                type="button"
+                disabled={index === 0}
+                onClick={() => moveImage(index, -1)}
+                className={btn}
+                aria-label="Move image up"
+              >
+                <ArrowUp className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={index === images.length - 1}
+                onClick={() => moveImage(index, 1)}
+                className={btn}
+                aria-label="Move image down"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(images.filter((_, itemIndex) => itemIndex !== index));
+                  setPreview((value) => Math.max(0, Math.min(value, images.length - 2)));
+                }}
+                className={`${btn} text-destructive`}
+                aria-label="Remove image"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-[10px] text-muted-foreground">Text-only announcement</p>
+      )}
     </div>
   );
 }

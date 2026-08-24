@@ -7,6 +7,7 @@ export type Announcement = {
   body_en: string;
   body_th: string;
   image_url: string;
+  image_urls: string[];
   link_url: string;
   updated_at: string;
 };
@@ -28,11 +29,21 @@ export const getAnnouncements = createServerFn({ method: "GET" }).handler(
     const { database: db } = await import("@/integrations/local/database.server");
     const { data } = await db
       .from("announcements")
-      .select("id, title_en, title_th, body_en, body_th, image_url, link_url, updated_at")
+      .select(
+        "id, title_en, title_th, body_en, body_th, image_url, image_urls, link_url, updated_at",
+      )
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .limit(5);
-    return (data ?? []) as Announcement[];
+    return (data ?? []).map((item: Announcement) => ({
+      ...item,
+      image_urls:
+        Array.isArray(item.image_urls) && item.image_urls.length > 0
+          ? item.image_urls
+          : item.image_url
+            ? [item.image_url]
+            : [],
+    })) as Announcement[];
   },
 );
 

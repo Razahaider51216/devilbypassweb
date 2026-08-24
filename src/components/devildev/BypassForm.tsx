@@ -72,10 +72,10 @@ export function BypassForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(17,24,39,0.94)_0%,rgba(10,10,12,0.96)_100%)] p-5 shadow-[0_0_60px_-30px_rgba(255,255,255,0.28)] backdrop-blur-xl sm:p-6"
+      className="rounded-3xl border border-border bg-card/95 p-5 shadow-[0_18px_60px_-45px_rgba(0,0,0,0.65)] backdrop-blur-xl sm:p-6"
     >
       <div className="flex items-center gap-2">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-emerald-400/25 bg-emerald-500/10 text-emerald-300 shadow-[0_0_16px_rgba(34,197,94,0.14)]">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-emerald-600/25 bg-emerald-500/10 text-emerald-700 shadow-[0_0_16px_rgba(34,197,94,0.12)] dark:border-emerald-400/25 dark:text-emerald-300">
           <Link2 className="h-3.5 w-3.5" />
         </span>
         <label
@@ -94,12 +94,12 @@ export function BypassForm({
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder={copy.placeholder}
-          className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-zinc-950/90 px-4 py-3.5 font-mono text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+          className="min-w-0 flex-1 rounded-2xl border border-input bg-background px-4 py-3.5 font-mono text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-emerald-600/45 focus:ring-2 focus:ring-emerald-500/10 dark:focus:border-emerald-400/40"
         />
         <button
           type="submit"
           disabled={pending || cooldownActive}
-          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.92)_0%,rgba(215,215,215,0.84)_100%)] px-6 py-3 text-sm font-semibold text-zinc-950 shadow-[0_0_24px_-10px_rgba(255,255,255,0.35)] transition-all hover:scale-[1.01] hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-foreground/10 bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-sm transition-all hover:scale-[1.01] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin" />

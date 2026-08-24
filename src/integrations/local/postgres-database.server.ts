@@ -21,7 +21,7 @@ const tableMeta = {
   site_settings: { key: "key", booleans: [], json: [] },
   contact_channels: { key: "id", booleans: ["is_active"], json: [] },
   purchase_contact_links: { key: "id", booleans: ["is_active"], json: [] },
-  announcements: { key: "id", booleans: ["is_active"], json: [] },
+  announcements: { key: "id", booleans: ["is_active"], json: ["image_urls"] },
   changelog_entries: {
     key: "id",
     booleans: ["is_published", "is_important"],
@@ -190,6 +190,7 @@ async function initialize() {
         body_en TEXT NOT NULL DEFAULT '',
         body_th TEXT NOT NULL DEFAULT '',
         image_url TEXT NOT NULL DEFAULT '',
+        image_urls TEXT NOT NULL DEFAULT '[]',
         link_url TEXT NOT NULL DEFAULT '',
         is_active BOOLEAN NOT NULL DEFAULT TRUE,
         sort_order INTEGER NOT NULL DEFAULT 0,
@@ -225,6 +226,13 @@ async function initialize() {
         updated_by TEXT
       );
     `);
+
+    await client.query(
+      "ALTER TABLE announcements ADD COLUMN IF NOT EXISTS image_urls TEXT NOT NULL DEFAULT '[]'",
+    );
+    await client.query(
+      "UPDATE announcements SET image_urls=json_build_array(image_url)::text WHERE image_urls='[]' AND image_url<>''",
+    );
 
     const stamp = now();
     const plans = [

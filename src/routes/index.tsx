@@ -11,7 +11,7 @@ import { HistoryList, type HistoryEntry } from "@/components/devildev/HistoryLis
 import { LangToggle } from "@/components/devildev/LangToggle";
 import { AppMenu } from "@/components/devildev/AppMenu";
 import { useSession } from "@/hooks/useSession";
-import { AnnouncementModal } from "@/components/devildev/AnnouncementModal";
+import { AnnouncementCarousel } from "@/components/devildev/AnnouncementCarousel";
 import { extra } from "@/lib/i18n-extra";
 import { RecentBypasses } from "@/components/devildev/RecentBypasses";
 import { BypassProcessing } from "@/components/devildev/BypassProcessing";
@@ -172,6 +172,8 @@ function DevilDevPage() {
           </p>
         </section>
 
+        <AnnouncementCarousel lang={lang} />
+
         <div className="mt-6 sm:mt-10">
           {!ready ? (
             <div className="h-[132px] animate-pulse rounded-2xl border border-border bg-card" />
@@ -257,7 +259,6 @@ function DevilDevPage() {
           </div>
         </footer>
       </div>
-      <AnnouncementModal lang={lang} />
     </main>
   );
 }
