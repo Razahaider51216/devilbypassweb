@@ -18,6 +18,7 @@ import { BypassProcessing } from "@/components/devildev/BypassProcessing";
 import { SupportedSites } from "@/components/devildev/SupportedSites";
 import { ThemeToggle } from "@/components/devildev/ThemeToggle";
 import { UpdatesBell } from "@/components/devildev/UpdatesBell";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/site-meta";
 
 const HISTORY_KEY = "devildev.history";
 const LANG_KEY = "devildev.lang";
@@ -27,20 +28,20 @@ const COOLDOWN_MS = 30_000;
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "DevilBypass — Link Bypass" },
+      { title: SITE_TITLE },
       {
         name: "description",
-        content:
-          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+        content: SITE_DESCRIPTION,
       },
-      { property: "og:title", content: "DevilBypass — Link Bypass" },
+      { property: "og:title", content: SITE_TITLE },
       {
         property: "og:description",
-        content:
-          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+        content: SITE_DESCRIPTION,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: SITE_TITLE },
+      { name: "twitter:description", content: SITE_DESCRIPTION },
     ],
   }),
   component: DevilDevPage,

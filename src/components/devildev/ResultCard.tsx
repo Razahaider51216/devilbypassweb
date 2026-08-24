@@ -20,18 +20,16 @@ export function ResultCard({
 
   return (
     <div
-      className={`mt-6 w-full max-w-full overflow-hidden rounded-[1.6rem] border p-4 sm:p-5 ${
-        succeeded
-          ? "border-emerald-600/30 bg-emerald-50/90 dark:border-emerald-400/35 dark:bg-[linear-gradient(180deg,rgba(16,185,129,0.14)_0%,rgba(10,10,12,0.96)_100%)]"
-          : "border-red-600/30 bg-red-50/90 dark:border-red-400/35 dark:bg-[linear-gradient(180deg,rgba(239,68,68,0.14)_0%,rgba(10,10,12,0.96)_100%)]"
+      role="status"
+      aria-live="polite"
+      className={`mt-6 w-full max-w-full overflow-hidden rounded-[1.6rem] border bg-card p-4 text-foreground sm:p-5 ${
+        succeeded ? "border-emerald-500/60" : "border-red-500/60"
       }`}
       style={{
-        animation: succeeded
-          ? "fade-in 0.35s ease-out both, dd-success-pulse 2.2s ease-in-out 350ms infinite"
-          : "fade-in 0.35s ease-out both, dd-error-pulse 1.8s ease-in-out 350ms infinite",
+        animation: "fade-in 0.25s ease-out both",
         boxShadow: succeeded
-          ? "0 0 0 1px rgba(34,197,94,0.24), 0 0 28px rgba(34,197,94,0.14)"
-          : "0 0 0 1px rgba(239,68,68,0.24), 0 0 28px rgba(239,68,68,0.14)",
+          ? "0 18px 48px -34px rgba(16,185,129,0.8)"
+          : "0 18px 48px -34px rgba(239,68,68,0.8)",
       }}
     >
       <div className="flex items-start gap-3 sm:gap-4">
@@ -40,7 +38,7 @@ export function ResultCard({
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p
-                className={`text-xs font-semibold uppercase tracking-[0.28em] ${succeeded ? "text-emerald-800 dark:text-emerald-200/90" : "text-red-800 dark:text-red-200/90"}`}
+                className={`text-xs font-semibold uppercase tracking-[0.22em] ${succeeded ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}
               >
                 {succeeded ? m.successTitle : copy.failedTitle}
               </p>
@@ -48,39 +46,33 @@ export function ResultCard({
                 className={`mt-2 h-px w-16 ${succeeded ? "bg-emerald-400/30" : "bg-red-400/30"}`}
               />
             </div>
-            {succeeded ? <CopyButton value={result.result} labels={copy} /> : null}
+            {succeeded ? (
+              <CopyButton
+                value={result.result}
+                labels={copy}
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-emerald-500/40 bg-background px-3 py-1.5 text-xs font-semibold tracking-wide text-foreground transition-colors hover:border-emerald-500 hover:bg-emerald-500/10"
+              />
+            ) : null}
           </div>
 
           {succeeded ? (
-            <p className="mt-1 text-[11px] text-emerald-800/75 dark:text-emerald-100/70">
-              {m.successHint}
-            </p>
+            <p className="mt-2 text-[11px] text-muted-foreground">{m.successHint}</p>
           ) : null}
 
           <div
-            className={`mt-3 rounded-2xl border px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${
-              succeeded
-                ? "border-emerald-600/20 bg-white/75 dark:border-emerald-400/20 dark:bg-zinc-950/80"
-                : "border-red-600/20 bg-white/75 dark:border-red-400/20 dark:bg-zinc-950/85"
+            className={`mt-3 rounded-2xl border bg-background px-4 py-3 shadow-inner ${
+              succeeded ? "border-emerald-500/30" : "border-red-500/30"
             }`}
           >
-            <p
-              className={`break-all font-mono text-sm leading-relaxed select-text ${
-                succeeded
-                  ? "text-emerald-950 dark:text-emerald-50"
-                  : "text-red-950 dark:text-red-100"
-              }`}
-            >
+            <p className="break-all font-mono text-sm leading-relaxed text-foreground select-text">
               {message}
             </p>
           </div>
 
-          <div
-            className={`mt-4 flex flex-wrap gap-2 text-xs ${succeeded ? "text-emerald-800 dark:text-emerald-100/75" : "text-red-800 dark:text-red-100/75"}`}
-          >
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-foreground">
             {result.time ? (
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 backdrop-blur ${succeeded ? "border-emerald-400/20 bg-emerald-500/10" : "border-red-400/20 bg-red-500/10"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 ${succeeded ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}
               >
                 <Clock3 className="h-3.5 w-3.5" />
                 <span>
@@ -90,7 +82,7 @@ export function ResultCard({
             ) : null}
             {result.expiresAt ? (
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 backdrop-blur ${succeeded ? "border-emerald-400/20 bg-emerald-500/10" : "border-red-400/20 bg-red-500/10"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 ${succeeded ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/30 bg-red-500/10"}`}
               >
                 <CopyIcon className="h-3.5 w-3.5" />
                 <span>

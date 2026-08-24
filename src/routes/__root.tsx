@@ -13,6 +13,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { SiteBackground } from "@/components/devildev/SiteBackground";
 
 import appCss from "../styles.css?url";
+import { SITE_DESCRIPTION, SITE_TITLE } from "@/lib/site-meta";
 
 function NotFoundComponent() {
   return (
@@ -76,26 +77,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DevilBypass — Link Bypass" },
+      { title: SITE_TITLE },
       {
         name: "description",
-        content:
-          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+        content: SITE_DESCRIPTION,
       },
       { name: "author", content: "DevilBypass" },
-      { property: "og:title", content: "DevilBypass — Link Bypass" },
+      { property: "og:title", content: SITE_TITLE },
       {
         property: "og:description",
-        content:
-          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+        content: SITE_DESCRIPTION,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "DevilBypass — Link Bypass" },
+      { name: "twitter:title", content: SITE_TITLE },
       {
         name: "twitter:description",
-        content:
-          "DevilBypass unlocks shortened and locked links in seconds. Paste a URL and get the real key back. Thai and English interface.",
+        content: SITE_DESCRIPTION,
       },
     ],
     links: [
