@@ -85,6 +85,11 @@ function consumeInMemoryRateLimit(ip: string, now = Date.now()): boolean {
 }
 
 async function isRequestAllowed(request: Request, env: WorkerEnv): Promise<boolean> {
+  const requestUrl = new URL(request.url);
+  // Session reads are cheap and are part of normal route hydration. Throttling
+  // them makes a busy but valid browser appear signed out while its cookie is valid.
+  if (request.method === "GET" && requestUrl.pathname === "/api/auth/session") return true;
+
   const ip = clientIp(request);
   // Page loads and React Query refetches must not consume the same bucket as
   // authenticated admin mutations. Keep one read and one write bucket per IP.

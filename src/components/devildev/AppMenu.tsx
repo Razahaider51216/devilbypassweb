@@ -134,9 +134,13 @@ export function AppMenu({ copy, lang }: { copy: Copy; lang: Lang }) {
   const username = me?.username ?? "";
 
   const signOut = async () => {
+    const { error } = await auth.signOut();
+    if (error) {
+      toast.error(copy.common.error);
+      return;
+    }
     await queryClient.cancelQueries();
     queryClient.clear();
-    await auth.signOut();
     setOpen(false);
     toast.success(copy.nav.logout);
   };
